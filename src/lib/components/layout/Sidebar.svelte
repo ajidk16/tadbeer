@@ -41,7 +41,7 @@
 		{ href: '/jamaah', label: 'Jamaah', icon: Users },
 		{ href: '/donasi', label: 'Donasi', icon: Heart },
 		{ href: '/inventaris', label: 'Inventaris', icon: Package },
-		{ href: '/pengumuman', label: 'Pengumuman', icon: Megaphone },
+		{ href: '/pengumuman', label: 'Pengumuman', icon: Megaphone }
 	];
 
 	// Track expanded submenus
@@ -88,7 +88,7 @@
 <aside class="bg-base-200 w-64 min-h-full flex flex-col">
 	<!-- Logo -->
 	<div class="p-4 border-b border-base-300">
-		<a href="/dashboard" class="flex items-center gap-3 text-xl font-bold text-primary">
+		<a href="/" class="flex items-center gap-3 text-xl font-bold text-primary">
 			<span class="text-2xl">🕌</span>
 			<span>MiniMasjid</span>
 		</a>

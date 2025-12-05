@@ -78,7 +78,7 @@
 		</button>
 
 		<!-- Logo (visible on mobile) -->
-		<a href="/dashboard" class="btn btn-ghost text-xl font-bold text-primary lg:hidden">
+		<a href="/" class="btn btn-ghost text-xl font-bold text-primary lg:hidden">
 			<span>🕌</span>
 			<span class="hidden sm:inline">MiniMasjid</span>
 		</a>
