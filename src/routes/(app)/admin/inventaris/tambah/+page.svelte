@@ -1,7 +1,10 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
-	import Toast, { success as toastSuccess, error as toastError } from '$lib/components/ui/Toast.svelte';
+	import Toast, {
+		success as toastSuccess,
+		error as toastError
+	} from '$lib/components/ui/Toast.svelte';
 	import { ArrowLeft, Save, Camera, Upload, X, Image as ImageIcon } from 'lucide-svelte';
 
 	let { form } = $props();
@@ -202,7 +205,9 @@
 					</div>
 
 					<div class="form-control">
-						<label for="location" class="label"><span class="label-text">Lokasi Penyimpanan</span></label>
+						<label for="location" class="label"
+							><span class="label-text">Lokasi Penyimpanan</span></label
+						>
 						<input
 							type="text"
 							name="location"
@@ -212,33 +217,38 @@
 					</div>
 
 					<div class="form-control">
-						<label for="purchaseDate" class="label"><span class="label-text">Tanggal Pembelian</span></label>
+						<label for="purchaseDate" class="label"
+							><span class="label-text">Tanggal Pembelian</span></label
+						>
 						<input type="date" name="purchaseDate" class="input input-bordered w-full" />
 					</div>
 
 					<div class="form-control">
-						<label for="unitPrice" class="label"><span class="label-text">Harga Per Unit</span></label>
+						<label for="price" class="label"><span class="label-text">Harga Per Unit</span></label>
 						<div class="input-group">
-							<span
-								class="bg-base-200 px-3 py-3 border border-r-0 border-base-300 rounded-l-lg text-sm"
-								>Rp</span
-							>
-							<input
-								type="number"
-								name="price"
-								class="input input-bordered w-full pl-2"
-								placeholder="0"
-							/>
+							<div class="flex">
+								<span
+									class="bg-base-200 px-3 py-2 border border-r-0 border-base-300 rounded-l-lg text-sm"
+									>Rp</span
+								>
+								<input
+									type="number"
+									name="price"
+									class="input input-bordered w-full pl-2"
+								/>
+							</div>
 						</div>
 					</div>
 				</div>
 			</div>
 
 			<div class="form-control">
-				<label for="description" class="label"><span class="label-text">Deskripsi / Catatan</span></label>
+				<label for="description" class="label"
+					><span class="label-text">Deskripsi / Catatan</span></label
+				>
 				<textarea
 					name="description"
-					class="textarea textarea-bordered h-24"
+					class="textarea textarea-bordered h-24 w-full"
 					placeholder="Deskripsi detail aset..."
 				></textarea>
 			</div>

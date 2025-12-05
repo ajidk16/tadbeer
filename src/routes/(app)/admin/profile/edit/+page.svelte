@@ -48,7 +48,7 @@
 				<label class="label" for="bio">
 					<span class="label-text font-medium">Bio</span>
 				</label>
-				<textarea id="bio" bind:value={bio} class="textarea textarea-bordered h-24"></textarea>
+				<textarea id="bio" bind:value={bio} class="textarea textarea-bordered h-24 w-full"></textarea>
 				<label for="" class="label">
 					<span class="label-text-alt">Brief description for your profile.</span>
 				</label>

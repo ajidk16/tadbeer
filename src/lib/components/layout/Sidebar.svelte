@@ -31,7 +31,7 @@
 			label: 'Keuangan',
 			icon: Wallet,
 			children: [
-				{ href: '/admin/keuangan', label: 'Overview' },
+				{ href: '/admin/keuangan/overview', label: 'Overview' },
 				{ href: '/admin/keuangan/pemasukan', label: 'Pemasukan' },
 				{ href: '/admin/keuangan/pengeluaran', label: 'Pengeluaran' },
 				{ href: '/admin/keuangan/laporan', label: 'Laporan' }

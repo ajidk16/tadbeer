@@ -64,10 +64,9 @@
 	}
 </script>
 
-<nav class="navbar bg-base-200 sticky top-0 z-50 border-b border-base-300 px-4">
+<nav class="navbar bg-base-200 sticky top-0 z-50 border-b border-base-300 px-4 flex justify-between items-center">
 	<!-- Left: Menu toggle (mobile) + Logo -->
-	<div class="navbar-start gap-2">
-		<!-- Hamburger menu button (mobile only) -->
+	<div class="navbar-start gap-2 block lg:hidden">
 		<button
 			type="button"
 			class="btn btn-ghost btn-square lg:hidden"
@@ -77,7 +76,6 @@
 			<Menu class="w-5 h-5" />
 		</button>
 
-		<!-- Logo (visible on mobile) -->
 		<a href="/" class="btn btn-ghost text-xl font-bold text-primary lg:hidden">
 			<span>🕌</span>
 			<span class="hidden sm:inline">MiniMasjid</span>
@@ -86,13 +84,32 @@
 
 	<!-- Center: Search (hidden on mobile) -->
 	<div class="navbar-center hidden md:flex">
-		<div class="relative">
-			<Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-base-content/50" />
-			<input
-				type="text"
-				placeholder="Cari..."
-				class="input input-sm bg-base-100 pl-10 w-64 focus:w-80 transition-all duration-300"
-			/>
+		<div class="form-control relative group">
+			<label for="global-search" class="sr-only">Search</label>
+			<div class="relative">
+				<Search
+					class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-base-content/40 group-focus-within:text-primary transition-colors pointer-events-none z-10"
+					aria-hidden="true"
+				/>
+				<input
+					id="global-search"
+					type="search"
+					placeholder="Cari transaksi, kegiatan, atau kontak..."
+					autocomplete="off"
+					class="input input-bordered input-sm bg-base-100/50 backdrop-blur-sm pl-10 pr-4 w-64 lg:w-80
+						   focus:w-96 focus:bg-base-100 focus:ring-2 focus:ring-primary/20 focus:border-primary
+						   transition-all duration-300 ease-in-out
+						   placeholder:text-base-content/40 placeholder:text-sm
+						   hover:bg-base-100/80"
+					aria-label="Global search"
+				/>
+				<!-- Search keyboard shortcut hint -->
+				<kbd
+					class="kbd kbd-xs absolute right-2 top-1/2 -translate-y-1/2 opacity-50 hidden lg:inline-flex"
+				>
+					⌘K
+				</kbd>
+			</div>
 		</div>
 	</div>
 
@@ -131,11 +148,22 @@
 				class="dropdown-content mt-3 w-64 bg-base-100 rounded-xl shadow-xl border border-base-300 z-50"
 			>
 				<!-- User Info -->
-				<div class="p-4 border-b border-base-200">
-					<p class="font-semibold">{user.name}</p>
-					{#if user.role}
-						<span class="badge badge-primary badge-sm mt-1">{user.role}</span>
-					{/if}
+				<div class="flex items-center gap-1 p-4 pb-2">
+					<div
+						class="w-10 h-10 rounded-full bg-primary text-primary-content grid place-items-center ring-2 ring-base-300"
+					>
+						{#if user.avatar}
+							<img src={user.avatar} alt={user.name} class="rounded-full" />
+						{:else}
+							<span class="text-sm font-bold">{getInitials(user.name)}</span>
+						{/if}
+					</div>
+					<div class="p-4 border-b border-base-200">
+						<p class="font-semibold">{user.name}</p>
+						{#if user.role}
+							<span class="badge badge-primary badge-sm mt-1">{user.role}</span>
+						{/if}
+					</div>
 				</div>
 
 				<!-- Menu Items -->

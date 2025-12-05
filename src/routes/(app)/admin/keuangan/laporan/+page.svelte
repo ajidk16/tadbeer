@@ -165,7 +165,7 @@
 								</td>
 								<td class="text-center">
 									<a
-										href="/keuangan/laporan/{selectedYear}-{String(i + 1).padStart(2, '0')}"
+										href="/admin/keuangan/laporan/{selectedYear}-{String(i + 1).padStart(2, '0')}"
 										class="btn btn-ghost btn-xs"
 										title="Lihat Detail"
 									>

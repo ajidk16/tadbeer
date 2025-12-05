@@ -59,7 +59,7 @@
 	<!-- Header -->
 	<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
 		<div class="flex items-center gap-4">
-			<a href="/keuangan/laporan" class="btn btn-ghost btn-sm btn-square">
+			<a href="/admin/keuangan/laporan" class="btn btn-ghost btn-sm btn-square">
 				<ArrowLeft class="w-5 h-5" />
 			</a>
 			<div>
