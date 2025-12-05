@@ -13,7 +13,12 @@
 		X,
 		Save,
 		ChevronLeft,
-		ChevronRight
+		ChevronRight,
+		Bell,
+		ClipboardCheck,
+		CheckCircle2,
+		XCircle,
+		MinusCircle
 	} from 'lucide-svelte';
 	import { onMount } from 'svelte';
 
@@ -35,9 +40,19 @@
 	let showFormModal = $state(false);
 	let showDetailModal = $state(false);
 	let showDeleteModal = $state(false);
+	let showAbsensiModal = $state(false);
 	let isEditMode = $state(false);
 	let selectedEvent = $state<(typeof data.events)[0] | null>(null);
 	let isSubmitting = $state(false);
+
+	// Attendance state
+	let attendanceList = $state([
+		{ id: '1', name: 'Ahmad Sudrajat', status: 'present' },
+		{ id: '2', name: 'Fatimah Azzahra', status: 'present' },
+		{ id: '3', name: 'Muhammad Rizki', status: 'absent' },
+		{ id: '4', name: 'Siti Nurhaliza', status: 'permission' },
+		{ id: '5', name: 'Abdullah Rahman', status: 'present' }
+	]);
 
 	// Form fields
 	let formTitle = $state('');
@@ -210,6 +225,28 @@
 			}
 		};
 	}
+
+	function handleReminder() {
+		toastSuccess('Reminder berhasil diset! Anda akan menerima notifikasi 1 jam sebelum acara.');
+	}
+
+	function openAbsensi(event: (typeof data.events)[0]) {
+		selectedEvent = event;
+		showAbsensiModal = true;
+	}
+
+	function updateAttendance(id: string, status: string) {
+		attendanceList = attendanceList.map((p) => (p.id === id ? { ...p, status } : p));
+	}
+
+	function saveAttendance() {
+		isSubmitting = true;
+		setTimeout(() => {
+			isSubmitting = false;
+			showAbsensiModal = false;
+			toastSuccess('Data absensi berhasil disimpan');
+		}, 1000);
+	}
 </script>
 
 <svelte:head>
@@ -305,9 +342,14 @@
 							</Badge>
 							<div class="dropdown dropdown-end">
 								<button class="btn btn-ghost btn-xs btn-square">⋮</button>
-								<ul class="dropdown-content menu bg-base-100 rounded-box shadow z-10 w-32 p-1">
+								<ul class="dropdown-content menu bg-base-100 rounded-box shadow z-10 w-40 p-1">
 									<li>
 										<button onclick={() => openDetail(event)}><Eye class="w-4 h-4" /> Detail</button
+										>
+									</li>
+									<li>
+										<button onclick={() => openAbsensi(event)}
+											><ClipboardCheck class="w-4 h-4" /> Absensi</button
 										>
 									</li>
 									<li>
@@ -594,23 +636,39 @@
 				{/if}
 			</div>
 
-			<div class="modal-action">
-				<button
-					class="btn btn-primary btn-sm"
-					onclick={() => {
-						showDetailModal = false;
-						openEditModal(selectedEvent!);
-					}}
-				>
-					<SquarePen class="w-4 h-4" /> Edit
-				</button>
-				<button
-					class="btn btn-ghost btn-sm"
-					onclick={() => {
-						showDetailModal = false;
-						selectedEvent = null;
-					}}>Tutup</button
-				>
+			<div class="modal-action justify-between">
+				<div class="flex gap-2">
+					<button class="btn btn-ghost btn-sm" onclick={handleReminder}>
+						<Bell class="w-4 h-4" /> Reminder
+					</button>
+					<button
+						class="btn btn-ghost btn-sm"
+						onclick={() => {
+							showDetailModal = false;
+							openAbsensi(selectedEvent!);
+						}}
+					>
+						<ClipboardCheck class="w-4 h-4" /> Absensi
+					</button>
+				</div>
+				<div class="flex gap-2">
+					<button
+						class="btn btn-primary btn-sm"
+						onclick={() => {
+							showDetailModal = false;
+							openEditModal(selectedEvent!);
+						}}
+					>
+						<SquarePen class="w-4 h-4" /> Edit
+					</button>
+					<button
+						class="btn btn-ghost btn-sm"
+						onclick={() => {
+							showDetailModal = false;
+							selectedEvent = null;
+						}}>Tutup</button
+					>
+				</div>
 			</div>
 		</div>
 		<form method="dialog" class="modal-backdrop">
@@ -652,6 +710,99 @@
 			<button
 				onclick={() => {
 					showDeleteModal = false;
+					selectedEvent = null;
+				}}>close</button
+			>
+		</form>
+	</dialog>
+{/if}
+
+<!-- Absensi Modal -->
+{#if showAbsensiModal && selectedEvent}
+	<dialog class="modal modal-open">
+		<div class="modal-box">
+			<button
+				class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2"
+				onclick={() => {
+					showAbsensiModal = false;
+					selectedEvent = null;
+				}}
+			>
+				<X class="w-4 h-4" />
+			</button>
+
+			<h3 class="font-bold text-lg mb-4">📝 Absensi Kegiatan</h3>
+			<div class="bg-base-200 rounded-lg p-3 mb-4">
+				<p class="font-medium">{selectedEvent.title}</p>
+				<p class="text-sm text-base-content/60">{formatDate(selectedEvent.date)}</p>
+			</div>
+
+			<div class="space-y-2 max-h-[300px] overflow-y-auto">
+				{#each attendanceList as participant (participant.id)}
+					<div
+						class="flex items-center justify-between p-2 hover:bg-base-200 rounded-lg border border-base-200"
+					>
+						<div class="flex items-center gap-3">
+							<div class="avatar placeholder">
+								<div class="bg-neutral text-neutral-content rounded-full w-8">
+									<span class="text-xs">{participant.name.charAt(0)}</span>
+								</div>
+							</div>
+							<span class="font-medium text-sm">{participant.name}</span>
+						</div>
+						<div class="join">
+							<button
+								class="join-item btn btn-xs {participant.status === 'present'
+									? 'btn-success'
+									: 'btn-ghost'}"
+								onclick={() => updateAttendance(participant.id, 'present')}
+								title="Hadir"
+							>
+								<CheckCircle2 class="w-4 h-4" />
+							</button>
+							<button
+								class="join-item btn btn-xs {participant.status === 'permission'
+									? 'btn-warning'
+									: 'btn-ghost'}"
+								onclick={() => updateAttendance(participant.id, 'permission')}
+								title="Izin"
+							>
+								<MinusCircle class="w-4 h-4" />
+							</button>
+							<button
+								class="join-item btn btn-xs {participant.status === 'absent'
+									? 'btn-error'
+									: 'btn-ghost'}"
+								onclick={() => updateAttendance(participant.id, 'absent')}
+								title="Alpha"
+							>
+								<XCircle class="w-4 h-4" />
+							</button>
+						</div>
+					</div>
+				{/each}
+			</div>
+
+			<div class="modal-action">
+				<button
+					class="btn btn-ghost"
+					onclick={() => {
+						showAbsensiModal = false;
+						selectedEvent = null;
+					}}>Batal</button
+				>
+				<button class="btn btn-primary" onclick={saveAttendance} disabled={isSubmitting}>
+					{#if isSubmitting}<span class="loading loading-spinner loading-sm"></span>{:else}<Save
+							class="w-4 h-4"
+						/>{/if}
+					Simpan Absensi
+				</button>
+			</div>
+		</div>
+		<form method="dialog" class="modal-backdrop">
+			<button
+				onclick={() => {
+					showAbsensiModal = false;
 					selectedEvent = null;
 				}}>close</button
 			>

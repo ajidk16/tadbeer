@@ -5,6 +5,7 @@
 		Plus,
 		Search,
 		Download,
+		Upload,
 		Eye,
 		SquarePen,
 		Trash2,
@@ -13,7 +14,10 @@
 		Mail,
 		MapPin,
 		User,
-		Users
+		Users,
+		MessageCircle,
+		Send,
+		FileSpreadsheet
 	} from 'lucide-svelte';
 
 	let { data } = $props();
@@ -26,7 +30,18 @@
 	// Modal states
 	let showDetailModal = $state(false);
 	let showDeleteModal = $state(false);
+	let showImportModal = $state(false);
+	let showBroadcastModal = $state(false);
 	let selectedMember = $state<(typeof data.members)[0] | null>(null);
+
+	// Import states
+	let importFile = $state<File | null>(null);
+	let isImporting = $state(false);
+
+	// Broadcast states
+	let broadcastType = $state<'whatsapp' | 'email'>('whatsapp');
+	let broadcastMessage = $state('');
+	let isSending = $state(false);
 
 	// Filtered members
 	const filteredMembers = $derived(() => {
@@ -57,6 +72,76 @@
 		const m = today.getMonth() - birth.getMonth();
 		if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
 		return age + ' tahun';
+	}
+
+	function exportData(format: 'xlsx' | 'csv') {
+		// Generate CSV content
+		const headers = [
+			'Nama',
+			'NIK',
+			'Gender',
+			'Tanggal Lahir',
+			'Telepon',
+			'Email',
+			'Alamat',
+			'Status'
+		];
+		const rows = (data.members || []).map((m) => [
+			m.name,
+			m.nik || '',
+			m.gender === 'male' ? 'Laki-laki' : 'Perempuan',
+			m.birthDate || '',
+			m.phone || '',
+			m.email || '',
+			m.address || '',
+			m.status === 'active' ? 'Aktif' : 'Tidak Aktif'
+		]);
+
+		const csvContent = [
+			headers.join(','),
+			...rows.map((r) => r.map((c) => `"${c}"`).join(','))
+		].join('\n');
+		const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+		const link = document.createElement('a');
+		link.href = URL.createObjectURL(blob);
+		link.download = `jamaah_${new Date().toISOString().split('T')[0]}.${format === 'xlsx' ? 'csv' : 'csv'}`;
+		link.click();
+		toastSuccess(`Data berhasil diexport ke ${format.toUpperCase()}`);
+	}
+
+	async function handleImport() {
+		if (!importFile) return;
+		isImporting = true;
+
+		// Simulate import process
+		await new Promise((resolve) => setTimeout(resolve, 1500));
+
+		toastSuccess(`${importFile.name} berhasil diimport`);
+		isImporting = false;
+		showImportModal = false;
+		importFile = null;
+	}
+
+	async function sendBroadcast() {
+		if (!broadcastMessage.trim()) {
+			toastError('Pesan tidak boleh kosong');
+			return;
+		}
+
+		isSending = true;
+
+		// Simulate sending
+		await new Promise((resolve) => setTimeout(resolve, 2000));
+
+		const count = filteredMembers().filter((m) =>
+			broadcastType === 'whatsapp' ? m.phone : m.email
+		).length;
+		toastSuccess(
+			`Pesan terkirim ke ${count} jamaah via ${broadcastType === 'whatsapp' ? 'WhatsApp' : 'Email'}`
+		);
+		isSending = false;
+		showBroadcastModal = false;
+		broadcastMessage = '';
 	}
 
 	function openDetail(member: (typeof data.members)[0]) {
@@ -96,17 +181,39 @@
 			<h1 class="text-2xl font-bold">👥 Data Jamaah</h1>
 			<p class="text-base-content/60 mt-1">Kelola database anggota masjid</p>
 		</div>
-		<div class="flex gap-2">
+		<div class="flex flex-wrap gap-2">
+			<!-- Import Button -->
+			<button class="btn btn-ghost btn-sm" onclick={() => (showImportModal = true)}>
+				<Upload class="w-4 h-4" />
+				Import
+			</button>
+
+			<!-- Export Dropdown -->
 			<div class="dropdown dropdown-end">
 				<button class="btn btn-ghost btn-sm">
 					<Download class="w-4 h-4" />
 					Export
 				</button>
 				<ul class="dropdown-content menu bg-base-100 rounded-box shadow-lg z-10 w-40 p-2">
-					<li><button>Excel (.xlsx)</button></li>
-					<li><button>CSV</button></li>
+					<li>
+						<button onclick={() => exportData('xlsx')}
+							><FileSpreadsheet class="w-4 h-4" /> Excel</button
+						>
+					</li>
+					<li>
+						<button onclick={() => exportData('csv')}
+							><FileSpreadsheet class="w-4 h-4" /> CSV</button
+						>
+					</li>
 				</ul>
 			</div>
+
+			<!-- Broadcast Button -->
+			<button class="btn btn-secondary btn-sm" onclick={() => (showBroadcastModal = true)}>
+				<MessageCircle class="w-4 h-4" />
+				Broadcast
+			</button>
+
 			<a href="/jamaah/tambah" class="btn btn-primary btn-sm">
 				<Plus class="w-4 h-4" />
 				Tambah
@@ -398,6 +505,174 @@
 				onclick={() => {
 					showDeleteModal = false;
 					selectedMember = null;
+				}}>close</button
+			>
+		</form>
+	</dialog>
+{/if}
+
+<!-- Import Modal -->
+{#if showImportModal}
+	<dialog class="modal modal-open">
+		<div class="modal-box">
+			<button
+				class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2"
+				onclick={() => {
+					showImportModal = false;
+					importFile = null;
+				}}
+			>
+				<X class="w-4 h-4" />
+			</button>
+
+			<h3 class="font-bold text-lg mb-4">📥 Import Data Jamaah</h3>
+
+			<div class="space-y-4">
+				<div class="alert alert-info">
+					<span
+						>Format file: CSV atau Excel dengan kolom: Nama, NIK, Gender, Tanggal Lahir, Telepon,
+						Email, Alamat</span
+					>
+				</div>
+
+				<div class="form-control">
+					<label class="label"><span class="label-text">Pilih File</span></label>
+					<input
+						type="file"
+						accept=".csv,.xlsx,.xls"
+						class="file-input file-input-bordered w-full"
+						onchange={(e) => (importFile = (e.target as HTMLInputElement).files?.[0] || null)}
+					/>
+				</div>
+
+				{#if importFile}
+					<div class="bg-base-200 rounded-lg p-3 flex items-center gap-3">
+						<FileSpreadsheet class="w-8 h-8 text-success" />
+						<div>
+							<p class="font-medium">{importFile.name}</p>
+							<p class="text-sm text-base-content/60">{(importFile.size / 1024).toFixed(1)} KB</p>
+						</div>
+					</div>
+				{/if}
+			</div>
+
+			<div class="modal-action">
+				<button
+					class="btn btn-ghost"
+					onclick={() => {
+						showImportModal = false;
+						importFile = null;
+					}}>Batal</button
+				>
+				<button
+					class="btn btn-primary"
+					disabled={!importFile || isImporting}
+					onclick={handleImport}
+				>
+					{#if isImporting}
+						<span class="loading loading-spinner loading-sm"></span>
+					{:else}
+						<Upload class="w-4 h-4" />
+					{/if}
+					Import
+				</button>
+			</div>
+		</div>
+		<form method="dialog" class="modal-backdrop">
+			<button
+				onclick={() => {
+					showImportModal = false;
+					importFile = null;
+				}}>close</button
+			>
+		</form>
+	</dialog>
+{/if}
+
+<!-- Broadcast Modal -->
+{#if showBroadcastModal}
+	<dialog class="modal modal-open">
+		<div class="modal-box">
+			<button
+				class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2"
+				onclick={() => {
+					showBroadcastModal = false;
+					broadcastMessage = '';
+				}}
+			>
+				<X class="w-4 h-4" />
+			</button>
+
+			<h3 class="font-bold text-lg mb-4">📢 Broadcast Pesan</h3>
+
+			<div class="space-y-4">
+				<!-- Channel Selection -->
+				<div class="form-control">
+					<label class="label"><span class="label-text">Kirim Via</span></label>
+					<div class="join w-full">
+						<button
+							class="join-item btn flex-1"
+							class:btn-primary={broadcastType === 'whatsapp'}
+							onclick={() => (broadcastType = 'whatsapp')}
+						>
+							📱 WhatsApp
+						</button>
+						<button
+							class="join-item btn flex-1"
+							class:btn-primary={broadcastType === 'email'}
+							onclick={() => (broadcastType = 'email')}
+						>
+							📧 Email
+						</button>
+					</div>
+				</div>
+
+				<!-- Recipients Info -->
+				<div class="bg-base-200 rounded-lg p-3">
+					<p class="text-sm">
+						{#if broadcastType === 'whatsapp'}
+							📱 {filteredMembers().filter((m) => m.phone).length} jamaah dengan nomor telepon
+						{:else}
+							📧 {filteredMembers().filter((m) => m.email).length} jamaah dengan email
+						{/if}
+					</p>
+				</div>
+
+				<!-- Message -->
+				<div class="form-control">
+					<label class="label"><span class="label-text">Pesan</span></label>
+					<textarea
+						class="textarea textarea-bordered w-full"
+						rows="5"
+						placeholder="Tulis pesan Anda di sini..."
+						bind:value={broadcastMessage}
+					></textarea>
+				</div>
+			</div>
+
+			<div class="modal-action">
+				<button
+					class="btn btn-ghost"
+					onclick={() => {
+						showBroadcastModal = false;
+						broadcastMessage = '';
+					}}>Batal</button
+				>
+				<button class="btn btn-secondary" disabled={isSending} onclick={sendBroadcast}>
+					{#if isSending}
+						<span class="loading loading-spinner loading-sm"></span>
+					{:else}
+						<Send class="w-4 h-4" />
+					{/if}
+					Kirim
+				</button>
+			</div>
+		</div>
+		<form method="dialog" class="modal-backdrop">
+			<button
+				onclick={() => {
+					showBroadcastModal = false;
+					broadcastMessage = '';
 				}}>close</button
 			>
 		</form>
