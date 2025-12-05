@@ -5,11 +5,11 @@
 	let { children } = $props();
 
 	const navItems = [
-		{ href: '/settings/masjid', label: 'Profile Masjid', icon: Building2 },
-		{ href: '/settings/users', label: 'User Management', icon: Users },
-		{ href: '/settings/roles', label: 'Role Management', icon: Shield },
-		{ href: '/settings/logs', label: 'Audit Logs', icon: FileText },
-		{ href: '/settings/config', label: 'Configuration', icon: Settings }
+		{ href: '/admin/settings/masjid', label: 'Profile Masjid', icon: Building2 },
+		{ href: '/admin/settings/users', label: 'User Management', icon: Users },
+		{ href: '/admin/settings/roles', label: 'Role Management', icon: Shield },
+		{ href: '/admin/settings/logs', label: 'Audit Logs', icon: FileText },
+		{ href: '/admin/settings/config', label: 'Configuration', icon: Settings }
 	];
 
 	let isMobileMenuOpen = $state(false);

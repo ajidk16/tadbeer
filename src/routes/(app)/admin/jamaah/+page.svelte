@@ -214,7 +214,7 @@
 				Broadcast
 			</button>
 
-			<a href="/jamaah/tambah" class="btn btn-primary btn-sm">
+			<a href="/admin/jamaah/tambah" class="btn btn-primary btn-sm">
 				<Plus class="w-4 h-4" />
 				Tambah
 			</a>
@@ -339,7 +339,7 @@
 										>
 											<Eye class="w-4 h-4" />
 										</button>
-										<a href="/jamaah/{member.id}/edit" class="btn btn-ghost btn-xs btn-square">
+										<a href="/admin/jamaah/{member.id}/edit" class="btn btn-ghost btn-xs btn-square">
 											<SquarePen class="w-4 h-4" />
 										</a>
 										<button
@@ -451,7 +451,7 @@
 			</div>
 
 			<div class="modal-action">
-				<a href="/jamaah/{selectedMember.id}/edit" class="btn btn-primary btn-sm">
+				<a href="/admin/jamaah/{selectedMember.id}/edit" class="btn btn-primary btn-sm">
 					<SquarePen class="w-4 h-4" /> Edit
 				</a>
 				<button

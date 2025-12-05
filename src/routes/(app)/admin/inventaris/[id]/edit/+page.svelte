@@ -56,7 +56,7 @@
 <div class="max-w-3xl mx-auto space-y-6">
 	<!-- Header -->
 	<div class="flex items-center gap-4">
-		<a href="/inventaris" class="btn btn-ghost btn-sm btn-square">
+		<a href="/admin/inventaris" class="btn btn-ghost btn-sm btn-square">
 			<ArrowLeft class="w-5 h-5" />
 		</a>
 		<div>
@@ -276,7 +276,7 @@
 					<Trash2 class="w-4 h-4" /> Hapus
 				</button>
 				<div class="flex gap-2">
-					<a href="/inventaris" class="btn btn-ghost">Batal</a>
+					<a href="/admin/inventaris" class="btn btn-ghost">Batal</a>
 					<button type="submit" class="btn btn-primary" disabled={isSubmitting}>
 						{#if isSubmitting}
 							<span class="loading loading-spinner loading-sm"></span>

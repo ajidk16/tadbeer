@@ -26,22 +26,22 @@
 	}
 
 	const menuItems: MenuItem[] = [
-		{ href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+		{ href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
 		{
 			label: 'Keuangan',
 			icon: Wallet,
 			children: [
-				{ href: '/keuangan', label: 'Overview' },
-				{ href: '/keuangan/pemasukan', label: 'Pemasukan' },
-				{ href: '/keuangan/pengeluaran', label: 'Pengeluaran' },
-				{ href: '/keuangan/laporan', label: 'Laporan' }
+				{ href: '/admin/keuangan', label: 'Overview' },
+				{ href: '/admin/keuangan/pemasukan', label: 'Pemasukan' },
+				{ href: '/admin/keuangan/pengeluaran', label: 'Pengeluaran' },
+				{ href: '/admin/keuangan/laporan', label: 'Laporan' }
 			]
 		},
-		{ href: '/kegiatan', label: 'Kegiatan', icon: Calendar },
-		{ href: '/jamaah', label: 'Jamaah', icon: Users },
-		{ href: '/donasi', label: 'Donasi', icon: Heart },
-		{ href: '/inventaris', label: 'Inventaris', icon: Package },
-		{ href: '/pengumuman', label: 'Pengumuman', icon: Megaphone }
+		{ href: '/admin/kegiatan', label: 'Kegiatan', icon: Calendar },
+		{ href: '/admin/jamaah', label: 'Jamaah', icon: Users },
+		{ href: '/admin/donasi', label: 'Donasi', icon: Heart },
+		{ href: '/admin/inventaris', label: 'Inventaris', icon: Package },
+		{ href: '/admin/pengumuman', label: 'Pengumuman', icon: Megaphone }
 	];
 
 	// Track expanded submenus
@@ -49,7 +49,7 @@
 
 	function isActive(href: string): boolean {
 		if (href === '/dashboard') {
-			return page.url.pathname === '/dashboard';
+			return page.url.pathname === '/admin/dashboard';
 		}
 		return page.url.pathname.startsWith(href);
 	}

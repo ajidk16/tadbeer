@@ -113,7 +113,7 @@
 				<Download class="w-4 h-4" />
 				Export
 			</button>
-			<a href="/inventaris/tambah" class="btn btn-primary btn-sm">
+			<a href="/admin/inventaris/tambah" class="btn btn-primary btn-sm">
 				<Plus class="w-4 h-4" />
 				Tambah Aset
 			</a>
@@ -246,7 +246,7 @@
 										<td>
 											<div class="flex justify-center gap-1">
 												<a
-													href="/inventaris/{asset.id}/edit"
+													href="/admin/inventaris/{asset.id}/edit"
 													class="btn btn-ghost btn-xs btn-square"
 												>
 													<SquarePen class="w-4 h-4" />

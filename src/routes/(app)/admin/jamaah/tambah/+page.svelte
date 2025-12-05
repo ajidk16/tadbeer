@@ -46,7 +46,7 @@
 <div class="max-w-2xl mx-auto space-y-6">
 	<!-- Header -->
 	<div class="flex items-center gap-4">
-		<a href="/jamaah" class="btn btn-ghost btn-sm btn-square">
+		<a href="/admin/jamaah" class="btn btn-ghost btn-sm btn-square">
 			<ArrowLeft class="w-5 h-5" />
 		</a>
 		<div>
@@ -211,7 +211,7 @@
 
 			<!-- Actions -->
 			<div class="flex justify-end gap-2 pt-4 border-t border-base-200">
-				<a href="/jamaah" class="btn btn-ghost">Batal</a>
+				<a href="/admin/jamaah" class="btn btn-ghost">Batal</a>
 				<button type="submit" class="btn btn-primary" disabled={isSubmitting}>
 					{#if isSubmitting}
 						<span class="loading loading-spinner loading-sm"></span>

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
-	import { Toast, success as toastSuccess, error as toastError } from '$lib/components/ui';
+	import { Toast } from '$lib/components/ui';
 	import { ArrowLeft, Save, Camera, Upload, X, Trash2 } from 'lucide-svelte';
 
 	let { data, form } = $props();
@@ -26,10 +26,10 @@
 		return async ({ result, update }: any) => {
 			isSubmitting = false;
 			if (result.type === 'redirect') {
-				toastSuccess('Data jamaah berhasil diperbarui');
+				Toast.success('Data jamaah berhasil diperbarui');
 				goto(result.location);
 			} else if (result.type === 'failure') {
-				toastError(result.data?.error || 'Gagal menyimpan');
+				Toast.error(result.data?.error || 'Gagal menyimpan');
 			} else {
 				await update();
 			}
@@ -56,7 +56,7 @@
 <div class="max-w-2xl mx-auto space-y-6">
 	<!-- Header -->
 	<div class="flex items-center gap-4">
-		<a href="/jamaah" class="btn btn-ghost btn-sm btn-square">
+		<a href="/admin/jamaah" class="btn btn-ghost btn-sm btn-square">
 			<ArrowLeft class="w-5 h-5" />
 		</a>
 		<div>
@@ -231,7 +231,7 @@
 					<Trash2 class="w-4 h-4" /> Hapus
 				</button>
 				<div class="flex gap-2">
-					<a href="/jamaah" class="btn btn-ghost">Batal</a>
+					<a href="/admin/jamaah" class="btn btn-ghost">Batal</a>
 					<button type="submit" class="btn btn-primary" disabled={isSubmitting}>
 						{#if isSubmitting}
 							<span class="loading loading-spinner loading-sm"></span>
