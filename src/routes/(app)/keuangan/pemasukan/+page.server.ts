@@ -1,4 +1,5 @@
-import type { PageServerLoad } from './$types';
+import type { Actions, PageServerLoad } from './$types';
+import { fail } from '@sveltejs/kit';
 
 export const load: PageServerLoad = async ({ url }) => {
 	const page = Number(url.searchParams.get('page')) || 1;
@@ -67,4 +68,20 @@ export const load: PageServerLoad = async ({ url }) => {
 		currentPage: page,
 		totalPages: Math.ceil(transactions.length / limit)
 	};
+};
+
+export const actions: Actions = {
+	delete: async ({ request }) => {
+		const formData = await request.formData();
+		const id = formData.get('id') as string;
+
+		if (!id) {
+			return fail(400, { error: 'ID tidak ditemukan' });
+		}
+
+		// TODO: Delete from database
+		console.log('Deleting income:', id);
+
+		return { success: true, message: 'Transaksi berhasil dihapus' };
+	}
 };

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { Snippet } from 'svelte';
+	import { onMount, type Snippet } from 'svelte';
 
 	interface Props {
 		open?: boolean;
@@ -27,7 +27,7 @@
 
 	let dialogEl: HTMLDialogElement;
 
-	$effect(() => {
+	onMount(() => {
 		if (open) {
 			dialogEl?.showModal();
 		} else {

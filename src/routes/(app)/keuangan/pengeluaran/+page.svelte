@@ -1,12 +1,34 @@
 <script lang="ts">
-	import { Badge } from '$lib/components/ui';
-	import { Plus, Download, Eye, SquarePen, Trash2 } from 'lucide-svelte';
+	import { enhance } from '$app/forms';
+	import { Badge, Toast, success as toastSuccess, error as toastError } from '$lib/components/ui';
+	import { Plus, Download, Eye, SquarePen, Trash2, X } from 'lucide-svelte';
+	import { onMount } from 'svelte';
 
-	let { data } = $props();
+	let { data, form } = $props();
 
 	// Filter states
 	let searchQuery = $state('');
 	let selectedCategory = $state('');
+
+	// Modal states
+	let showDetailModal = $state(false);
+	let showDeleteModal = $state(false);
+	let selectedTransaction = $state<(typeof data.transactions)[0] | null>(null);
+	let isDeleting = $state(false);
+	let lastFormId = $state<string | null>(null);
+
+	// Show toast on form result (only once per form submission)
+	onMount(() => {
+		const formId = form?.success ? 'success' : form?.error ? 'error' : null;
+		if (formId && formId !== lastFormId) {
+			lastFormId = formId;
+			if (form?.success) {
+				toastSuccess(form.message || 'Berhasil!');
+			} else if (form?.error) {
+				toastError(form.error);
+			}
+		}
+	});
 
 	// Format currency
 	function formatCurrency(value: number): string {
@@ -37,11 +59,38 @@
 	});
 
 	const totalAmount = $derived(filteredTransactions().reduce((sum, tx) => sum + tx.amount, 0));
+
+	function openDetail(tx: (typeof data.transactions)[0]) {
+		selectedTransaction = tx;
+		showDetailModal = true;
+	}
+
+	function openDelete(tx: (typeof data.transactions)[0]) {
+		selectedTransaction = tx;
+		showDeleteModal = true;
+	}
+
+	function handleDelete() {
+		return async ({ result, update }: any) => {
+			isDeleting = false;
+			showDeleteModal = false;
+			selectedTransaction = null;
+
+			if (result.type === 'success') {
+				toastSuccess('Transaksi berhasil dihapus');
+				await update();
+			} else if (result.type === 'failure') {
+				toastError(result.data?.error || 'Gagal menghapus');
+			}
+		};
+	}
 </script>
 
 <svelte:head>
 	<title>Pengeluaran | Keuangan | MiniMasjid</title>
 </svelte:head>
+
+<Toast />
 
 <div class="space-y-6">
 	<!-- Header -->
@@ -145,13 +194,13 @@
 								</td>
 								<td>
 									<div class="flex justify-center gap-1">
-										<a
-											href="/keuangan/pengeluaran/{tx.id}"
+										<button
 											class="btn btn-ghost btn-xs btn-square"
 											title="Lihat Detail"
+											onclick={() => openDetail(tx)}
 										>
 											<Eye class="w-4 h-4" />
-										</a>
+										</button>
 										<a
 											href="/keuangan/pengeluaran/{tx.id}/edit"
 											class="btn btn-ghost btn-xs btn-square"
@@ -159,7 +208,11 @@
 										>
 											<SquarePen class="w-4 h-4" />
 										</a>
-										<button class="btn btn-ghost btn-xs btn-square text-error" title="Hapus">
+										<button
+											class="btn btn-ghost btn-xs btn-square text-error"
+											title="Hapus"
+											onclick={() => openDelete(tx)}
+										>
 											<Trash2 class="w-4 h-4" />
 										</button>
 									</div>
@@ -192,3 +245,146 @@
 		</div>
 	</div>
 </div>
+
+<!-- Detail Modal -->
+{#if showDetailModal && selectedTransaction}
+	<dialog class="modal modal-open">
+		<div class="modal-box">
+			<button
+				class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2"
+				onclick={() => {
+					showDetailModal = false;
+					selectedTransaction = null;
+				}}
+			>
+				<X class="w-4 h-4" />
+			</button>
+
+			<h3 class="font-bold text-lg mb-4">📋 Detail Transaksi</h3>
+
+			<div class="space-y-4">
+				<div class="grid grid-cols-2 gap-4">
+					<div>
+						<p class="text-sm text-base-content/60">Tanggal</p>
+						<p class="font-medium">
+							{new Date(selectedTransaction.date).toLocaleDateString('id-ID', {
+								weekday: 'long',
+								day: 'numeric',
+								month: 'long',
+								year: 'numeric'
+							})}
+						</p>
+					</div>
+					<div>
+						<p class="text-sm text-base-content/60">Kategori</p>
+						<Badge variant="error">{selectedTransaction.category}</Badge>
+					</div>
+				</div>
+
+				<div>
+					<p class="text-sm text-base-content/60">Keterangan</p>
+					<p class="font-medium">{selectedTransaction.description}</p>
+				</div>
+
+				<div>
+					<p class="text-sm text-base-content/60">Jumlah</p>
+					<p class="text-2xl font-bold text-error">
+						-{formatCurrency(selectedTransaction.amount)}
+					</p>
+				</div>
+
+				{#if selectedTransaction.notes}
+					<div>
+						<p class="text-sm text-base-content/60">Catatan</p>
+						<p class="text-sm bg-base-200 rounded-lg p-3">{selectedTransaction.notes}</p>
+					</div>
+				{/if}
+			</div>
+
+			<div class="modal-action">
+				<a
+					href="/keuangan/pengeluaran/{selectedTransaction.id}/edit"
+					class="btn btn-primary btn-sm"
+				>
+					<SquarePen class="w-4 h-4" />
+					Edit
+				</a>
+				<button
+					class="btn btn-ghost btn-sm"
+					onclick={() => {
+						showDetailModal = false;
+						selectedTransaction = null;
+					}}
+				>
+					Tutup
+				</button>
+			</div>
+		</div>
+		<form method="dialog" class="modal-backdrop">
+			<button
+				onclick={() => {
+					showDetailModal = false;
+					selectedTransaction = null;
+				}}>close</button
+			>
+		</form>
+	</dialog>
+{/if}
+
+<!-- Delete Confirmation Modal -->
+{#if showDeleteModal && selectedTransaction}
+	<dialog class="modal modal-open">
+		<div class="modal-box">
+			<h3 class="font-bold text-lg text-error">⚠️ Hapus Transaksi</h3>
+			<p class="py-4">Apakah Anda yakin ingin menghapus transaksi ini?</p>
+
+			<div class="bg-base-200 rounded-lg p-4 mb-4">
+				<p class="font-medium">{selectedTransaction.description}</p>
+				<p class="text-error font-mono">-{formatCurrency(selectedTransaction.amount)}</p>
+				<p class="text-sm text-base-content/60">
+					{new Date(selectedTransaction.date).toLocaleDateString('id-ID')}
+				</p>
+			</div>
+
+			<p class="text-sm text-base-content/60">Tindakan ini tidak dapat dibatalkan.</p>
+
+			<div class="modal-action">
+				<button
+					class="btn btn-ghost"
+					onclick={() => {
+						showDeleteModal = false;
+						selectedTransaction = null;
+					}}
+				>
+					Batal
+				</button>
+				<form
+					method="POST"
+					action="?/delete"
+					use:enhance={() => {
+						isDeleting = true;
+						return handleDelete();
+					}}
+				>
+					<input type="hidden" name="id" value={selectedTransaction.id} />
+					<button type="submit" class="btn btn-error" disabled={isDeleting}>
+						{#if isDeleting}
+							<span class="loading loading-spinner loading-sm"></span>
+						{:else}
+							<Trash2 class="w-4 h-4" />
+						{/if}
+						Hapus
+					</button>
+				</form>
+			</div>
+		</div>
+		<form method="dialog" class="modal-backdrop">
+			<button
+				onclick={() => {
+					showDeleteModal = false;
+					selectedTransaction = null;
+				}}>close</button
+			>
+		</form>
+	</dialog>
+{/if}

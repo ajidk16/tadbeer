@@ -98,7 +98,7 @@
 	});
 
 	// Update chart when series changes
-	$effect(() => {
+	onMount(() => {
 		if (chartInstance && series) {
 			chartInstance.updateSeries(series);
 		}

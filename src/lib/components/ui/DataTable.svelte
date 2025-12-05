@@ -1,5 +1,5 @@
 <script lang="ts" generics="T extends Record<string, unknown>">
-	import type { Snippet } from 'svelte';
+	import { onMount, type Snippet } from 'svelte';
 
 	interface Column<T> {
 		key: keyof T | string;
@@ -101,7 +101,7 @@
 	}
 
 	// Reset page when search changes
-	$effect(() => {
+	onMount(() => {
 		searchQuery;
 		currentPage = 1;
 	});

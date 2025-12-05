@@ -1,9 +1,10 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
+	import { onMount } from 'svelte';
 
 	let isDark = $state(false);
 
-	$effect(() => {
+	onMount(() => {
 		if (browser) {
 			// Check for saved preference or system preference
 			const saved = localStorage.getItem('theme');

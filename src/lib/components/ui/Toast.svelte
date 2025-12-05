@@ -13,7 +13,7 @@
 
 	export function addToast(type: ToastType, message: string, duration = 5000): string {
 		const id = crypto.randomUUID();
-		toasts.push({ id, type, message, duration });
+		toasts = [...toasts, { id, type, message, duration }];
 
 		if (duration > 0) {
 			setTimeout(() => removeToast(id), duration);
