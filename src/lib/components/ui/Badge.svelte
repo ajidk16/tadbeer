@@ -9,7 +9,8 @@
 		| 'info'
 		| 'success'
 		| 'warning'
-		| 'error';
+		| 'error'
+		| 'ghost';
 	type BadgeSize = 'xs' | 'sm' | 'md' | 'lg';
 
 	interface Props {
@@ -36,7 +37,8 @@
 		info: 'badge-info',
 		success: 'badge-success',
 		warning: 'badge-warning',
-		error: 'badge-error'
+		error: 'badge-error',
+		ghost: 'badge-ghost'
 	};
 
 	const sizeClass: Record<BadgeSize, string> = {
