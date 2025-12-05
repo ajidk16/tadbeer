@@ -116,7 +116,7 @@
 							role="menuitem"
 						>
 							<div class="flex gap-3">
-								<span class="text-lg flex-shrink-0">{typeIcons[notification.type]}</span>
+								<span class="text-lg shrink-0">{typeIcons[notification.type]}</span>
 								<div class="flex-1 min-w-0">
 									<div class="flex items-start justify-between gap-2">
 										<p class="font-medium text-sm truncate">{notification.title}</p>

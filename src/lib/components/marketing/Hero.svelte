@@ -10,7 +10,7 @@
 
 	<!-- Gradient Overlay -->
 	<div
-		class="absolute inset-0 z-0 bg-gradient-to-b from-transparent via-base-100/50 to-base-100"
+		class="absolute inset-0 z-0 bg-linear-to-b from-transparent via-base-100/50 to-base-100"
 	></div>
 
 	<div class="container relative z-10 mx-auto px-4 py-20 text-center lg:py-32">
@@ -72,7 +72,7 @@
 				<div class="overflow-hidden rounded-lg bg-base-100 shadow-inner lg:rounded-xl">
 					<!-- Placeholder for Dashboard Screenshot -->
 					<div
-						class="aspect-[16/9] w-full bg-base-200 flex items-center justify-center text-base-content/30"
+						class="aspect-video w-full bg-base-200 flex items-center justify-center text-base-content/30"
 					>
 						<div class="text-center">
 							<span class="text-6xl mb-4 block">🖥️</span>

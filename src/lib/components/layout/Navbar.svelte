@@ -141,13 +141,13 @@
 				<!-- Menu Items -->
 				<ul class="menu p-2">
 					<li>
-						<a href="/profile" class="flex items-center gap-3">
+						<a href="/admin/profile" class="flex items-center gap-3">
 							<User class="w-4 h-4" />
 							<span>Profil Saya</span>
 						</a>
 					</li>
 					<li>
-						<a href="/settings/masjid" class="flex items-center gap-3">
+						<a href="/admin/settings/masjid" class="flex items-center gap-3">
 							<Settings class="w-4 h-4" />
 							<span>Pengaturan</span>
 						</a>

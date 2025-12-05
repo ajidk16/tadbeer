@@ -51,7 +51,7 @@
 									<Edit class="w-3 h-3" />
 								</button>
 								<ul
-									class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52"
+									class="dropdown-content z-1 menu p-2 shadow bg-base-100 rounded-box w-52"
 								>
 									<li><a href="#edit">Edit Role</a></li>
 									<li><a href="#delete" class="text-error">Delete</a></li>

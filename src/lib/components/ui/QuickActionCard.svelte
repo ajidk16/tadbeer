@@ -29,7 +29,7 @@
 		<div class="flex items-start gap-3">
 			<!-- Icon -->
 			<div
-				class="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0 group-hover:bg-primary/20 transition-colors"
+				class="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors"
 			>
 				{#if Icon}
 					<Icon class="w-6 h-6 text-primary" />
@@ -53,7 +53,7 @@
 
 			<!-- Arrow -->
 			<svg
-				class="w-5 h-5 text-base-content/30 group-hover:text-primary group-hover:translate-x-1 transition-all flex-shrink-0"
+				class="w-5 h-5 text-base-content/30 group-hover:text-primary group-hover:translate-x-1 transition-all shrink-0"
 				fill="none"
 				viewBox="0 0 24 24"
 				stroke="currentColor"

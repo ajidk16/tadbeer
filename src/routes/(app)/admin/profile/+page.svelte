@@ -16,7 +16,7 @@
 <div class="max-w-4xl mx-auto space-y-6 p-4 md:p-6">
 	<!-- Profile Header -->
 	<div class="card bg-base-100 shadow-sm border border-base-200 overflow-hidden">
-		<div class="h-32 bg-gradient-to-r from-primary to-secondary"></div>
+		<div class="h-32 bg-linear-to-r from-primary to-secondary"></div>
 		<div class="card-body pt-0 relative">
 			<div
 				class="flex flex-col md:flex-row justify-between items-start md:items-end -mt-12 mb-4 gap-4"

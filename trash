@@ -269,7 +269,7 @@
 				<div class="space-y-4">
 					<div class="flex items-start gap-4">
 						<div
-							class="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center text-2xl flex-shrink-0"
+							class="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center text-2xl shrink-0"
 						>
 							🎯
 						</div>
@@ -283,7 +283,7 @@
 					</div>
 					<div class="flex items-start gap-4">
 						<div
-							class="w-12 h-12 bg-accent/10 rounded-xl flex items-center justify-center text-2xl flex-shrink-0"
+							class="w-12 h-12 bg-accent/10 rounded-xl flex items-center justify-center text-2xl shrink-0"
 						>
 							📋
 						</div>
@@ -375,7 +375,7 @@
 		<div class="grid md:grid-cols-2 gap-8 items-start">
 			<!-- Bank Info -->
 			<div class="scroll-reveal-left">
-				<div class="card bg-gradient-to-br from-primary to-secondary text-white">
+				<div class="card bg-linear-to-br from-primary to-secondary text-white">
 					<div class="card-body">
 						<h3 class="card-title text-white mb-4">Transfer Bank</h3>
 						<div class="space-y-4">
@@ -515,7 +515,7 @@
 			<div class="scroll-reveal-left space-y-6">
 				<div class="flex items-start gap-4">
 					<div
-						class="w-12 h-12 bg-primary text-primary-content rounded-xl flex items-center justify-center text-xl flex-shrink-0"
+						class="w-12 h-12 bg-primary text-primary-content rounded-xl flex items-center justify-center text-xl shrink-0"
 					>
 						📍
 					</div>
@@ -531,7 +531,7 @@
 
 				<div class="flex items-start gap-4">
 					<div
-						class="w-12 h-12 bg-secondary text-secondary-content rounded-xl flex items-center justify-center text-xl flex-shrink-0"
+						class="w-12 h-12 bg-secondary text-secondary-content rounded-xl flex items-center justify-center text-xl shrink-0"
 					>
 						📞
 					</div>
@@ -546,7 +546,7 @@
 
 				<div class="flex items-start gap-4">
 					<div
-						class="w-12 h-12 bg-accent text-accent-content rounded-xl flex items-center justify-center text-xl flex-shrink-0"
+						class="w-12 h-12 bg-accent text-accent-content rounded-xl flex items-center justify-center text-xl shrink-0"
 					>
 						✉️
 					</div>
@@ -561,7 +561,7 @@
 
 				<div class="flex items-start gap-4">
 					<div
-						class="w-12 h-12 bg-neutral text-neutral-content rounded-xl flex items-center justify-center text-xl flex-shrink-0"
+						class="w-12 h-12 bg-neutral text-neutral-content rounded-xl flex items-center justify-center text-xl shrink-0"
 					>
 						🕐
 					</div>
