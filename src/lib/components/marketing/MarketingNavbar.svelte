@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Menu, X } from 'lucide-svelte';
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 
 	let isMenuOpen = $state(false);
 
@@ -10,10 +10,15 @@
 
 	const navLinks = [
 		{ href: '/', label: 'Beranda' },
-		{ href: '#features', label: 'Fitur' },
-		{ href: '#about', label: 'Tentang' },
-		{ href: '#contact', label: 'Kontak' }
+		{ href: '/events', label: 'Kegiatan' },
+		{ href: '/donation', label: 'Donasi' },
+		{ href: '/inventory', label: 'Inventaris' },
+		{ href: '/about', label: 'Tentang' },
+		// { href: '/contact', label: 'Kontak' }
 	];
+	function isActive(href: string) {
+		return (page.url.pathname as string) === href && href !== '#';
+	}
 </script>
 
 <nav
@@ -33,7 +38,7 @@
 					<a
 						href={link.href}
 						class="text-sm font-medium text-base-content/70 transition-colors hover:text-primary"
-						class:text-primary={$page.url.pathname === link.href && link.href !== '#'}
+						class:text-primary={isActive(link.href)}
 					>
 						{link.label}
 					</a>

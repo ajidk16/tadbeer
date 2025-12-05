@@ -51,14 +51,13 @@
 				Coba Gratis Sekarang
 				<ArrowRight class="h-5 w-5" />
 			</a>
-			<a href="#demo" class="btn btn-outline btn-lg gap-2 hover:bg-base-200">
-				<Play class="h-5 w-5" />
-				Lihat Demo
+			<a href="#features" class="btn btn-outline btn-lg gap-2 hover:bg-base-200">
+				Lihat Fitur
 			</a>
 		</div>
 
 		<!-- Dashboard Preview (Mockup) -->
-		<div class="animate-fadeIn mt-16 lg:mt-24" style="animation-delay: 0.5s;">
+		<!-- <div class="animate-fadeIn mt-16 lg:mt-24" style="animation-delay: 0.5s;">
 			<div
 				class="relative mx-auto max-w-5xl rounded-xl bg-base-300 p-2 shadow-2xl ring-1 ring-base-content/10 lg:rounded-2xl lg:p-4"
 			>
@@ -70,7 +69,6 @@
 				></div>
 
 				<div class="overflow-hidden rounded-lg bg-base-100 shadow-inner lg:rounded-xl">
-					<!-- Placeholder for Dashboard Screenshot -->
 					<div
 						class="aspect-video w-full bg-base-200 flex items-center justify-center text-base-content/30"
 					>
@@ -81,6 +79,6 @@
 					</div>
 				</div>
 			</div>
-		</div>
+		</div> -->
 	</div>
 </section>

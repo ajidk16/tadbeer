@@ -228,7 +228,7 @@
 					<div class="card-body">
 						<div class="flex items-center justify-between mb-2">
 							<h2 class="card-title text-base">📅 Kegiatan Mendatang</h2>
-							<a href="/kegiatan" class="btn btn-ghost btn-xs">
+							<a href="/admin/kegiatan" class="btn btn-ghost btn-xs">
 								Lihat semua
 								<ArrowRight class="w-3 h-3" />
 							</a>
@@ -288,7 +288,7 @@
 				<div class="card-body">
 					<div class="flex items-center justify-between mb-2">
 						<h2 class="card-title text-lg">🔔 Aktivitas Terbaru</h2>
-						<a href="/notifications" class="btn btn-ghost btn-xs">Semua</a>
+						<a href="/admin/notifications" class="btn btn-ghost btn-xs">Semua</a>
 					</div>
 					<div class="space-y-3">
 						{#if page.data.recentActivity && page.data.recentActivity.length > 0}
