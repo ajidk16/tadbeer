@@ -4,7 +4,7 @@ import { valibot } from 'sveltekit-superforms/adapters';
 import { profileSchema, securitySchema } from '$lib/schemas';
 import { db } from '$lib/server/db';
 import * as table from '$lib/server/db/schema';
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, count } from 'drizzle-orm';
 import { logAudit } from '$lib/server/audit';
 import { lucia } from '$lib/server/auth';
 import { verify, hash } from '@node-rs/argon2';
@@ -27,6 +27,16 @@ export const load = async ({ locals }) => {
 		.where(eq(table.session.userId, user.id))
 		.orderBy(desc(table.session.expiresAt));
 
+	const [donationStats] = await db
+		.select({ count: count() })
+		.from(table.donation)
+		.where(eq(table.donation.verifiedBy, user.id));
+
+	const [eventStats] = await db.select({ count: count() }).from(table.event);
+	// Note: Currently no relation between user and event attendance.
+	// Returning total events for now or 0 if we want strict user stats.
+	// For "Attended", we need an event_attendance table.
+
 	const profileForm = await superValidate(
 		{
 			fullName: user.fullName || '',
@@ -41,6 +51,10 @@ export const load = async ({ locals }) => {
 	return {
 		user,
 		sessions,
+		stats: {
+			donations: donationStats?.count || 0,
+			events: eventStats?.count || 0 // Placeholder until event attendance is implemented
+		},
 		profileForm,
 		securityForm
 	};

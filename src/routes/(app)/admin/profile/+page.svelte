@@ -8,8 +8,9 @@
 	import { valibotClient } from 'sveltekit-superforms/adapters';
 	import { profileSchema, securitySchema } from '$lib/schemas';
 	import { success as toastSuccess, error as toastError } from '$lib/components/ui';
+	import { goto } from '$app/navigation';
 
-	let { user, sessions, profileForm, securityForm } = $derived(page.data);
+	let { user, sessions, stats, profileForm, securityForm } = $derived(page.data);
 
 	const {
 		form: pForm,
@@ -103,15 +104,13 @@
 				<div class="flex gap-2 w-full md:w-auto">
 					<button
 						class="btn btn-outline btn-sm flex-1 md:flex-none"
-						onclick={() =>
-							(document.getElementById('edit_profile_modal') as HTMLDialogElement).showModal()}
+						onclick={() => goto('/admin/profile/edit')}
 					>
 						<Edit class="w-4 h-4 mr-1" /> Edit Profile
 					</button>
 					<button
 						class="btn btn-outline btn-sm flex-1 md:flex-none"
-						onclick={() =>
-							(document.getElementById('security_modal') as HTMLDialogElement).showModal()}
+						onclick={() => goto('/admin/profile/security')}
 					>
 						<Shield class="w-4 h-4 mr-1" /> Security
 					</button>
@@ -149,12 +148,12 @@
 					>
 						<div class="stat">
 							<div class="stat-title">Donations</div>
-							<div class="stat-value text-primary">12</div>
-							<div class="stat-desc">Last month</div>
+							<div class="stat-value text-primary">{stats.donations}</div>
+							<div class="stat-desc">Verified</div>
 						</div>
 						<div class="stat">
 							<div class="stat-title">Events</div>
-							<div class="stat-value text-secondary">5</div>
+							<div class="stat-value text-secondary">{stats.events}</div>
 							<div class="stat-desc">Attended</div>
 						</div>
 					</div>
