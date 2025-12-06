@@ -9,7 +9,7 @@
 
 <div class="max-w-2xl mx-auto space-y-6 p-4 md:p-6">
 	<div class="flex items-center gap-4 mb-6">
-		<a href="/profile" class="btn btn-ghost btn-circle btn-sm">
+		<a href="/admin/profile" class="btn btn-ghost btn-circle btn-sm">
 			<ArrowLeft class="w-5 h-5" />
 		</a>
 		<div>

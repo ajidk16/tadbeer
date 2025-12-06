@@ -167,7 +167,6 @@
 													class="btn btn-warning btn-outline"
 													onclick={() => {
 														showDeleteModal = true;
-														console.log('selectedUser', user);
 														selectedUser = user;
 													}}
 												>

@@ -68,6 +68,19 @@ export const roles = pgTable('roles', {
 });
 
 /**
+ * Permissions for Dynamic RBAC
+ */
+export const permissions = pgTable('permissions', {
+	id: serial('id').primaryKey(),
+	slug: text('slug').notNull().unique(), // e.g., 'manage_users'
+	name: text('name').notNull(), // e.g., 'Manage Users'
+	description: text('description'),
+	group: text('group').default('general').notNull(), // e.g., 'users', 'settings'
+	createdAt: timestamp('created_at').defaultNow().notNull(),
+	updatedAt: timestamp('updated_at').defaultNow().notNull()
+});
+
+/**
  * System Configuration
  */
 export const systemConfig = pgTable('system_config', {
@@ -89,6 +102,7 @@ export const user = pgTable('user', {
 	username: text('username').notNull().unique(),
 	passwordHash: text('password_hash').notNull(),
 	fullName: text('full_name'),
+	about: text('about'),
 	roleId: integer('role_id').references(() => roles.id),
 	role: roleEnum('role').default('jamaah').notNull(), // Deprecated in favor of roleId
 	phone: text('phone'),

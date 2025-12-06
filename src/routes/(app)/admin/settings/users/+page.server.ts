@@ -5,6 +5,7 @@ import { db } from '$lib/server/db';
 import * as table from '$lib/server/db/schema';
 import { inviteUserSchema, updateUserRoleSchema } from '$lib/schemas';
 import { eq, desc } from 'drizzle-orm';
+import { logAudit } from '$lib/server/audit';
 import { hash } from '@node-rs/argon2';
 
 export const load = async () => {
@@ -64,15 +65,18 @@ export const actions = {
 			await db.insert(table.user).values({
 				id: userId,
 				username: email,
-				fullName: name,
+				emailVerified: null,
 				passwordHash,
-				roleId,
-				emailVerified: new Date() // Auto-verify invited users or handle differently
+				fullName: name,
+				roleId
+			});
+
+			await logAudit(request.headers.get('x-user-id'), 'CREATE', 'user', userId, {
+				newValues: { email, name, roleId }
 			});
 
 			// In a real app, send email with temp password or invite link
 			// await sendInviteEmail(email, tempPassword);
-			console.log(`Invited user ${email} with password ${tempPassword}`);
 		} catch (error) {
 			console.error('Invite failed:', error);
 			return fail(500, { form, message: 'Failed to invite user' });
@@ -92,6 +96,10 @@ export const actions = {
 
 		try {
 			await db.update(table.user).set({ roleId }).where(eq(table.user.id, userId));
+
+			await logAudit(request.headers.get('x-user-id'), 'UPDATE', 'user', userId, {
+				newValues: { roleId }
+			});
 		} catch (error) {
 			console.error('Update role failed:', error);
 			return fail(500, { form, message: 'Failed to update role' });
@@ -116,6 +124,8 @@ export const actions = {
 			await db.delete(table.member).where(eq(table.member.userId, userId));
 			await db.delete(table.announcement).where(eq(table.announcement.authorId, userId));
 			await db.delete(table.user).where(eq(table.user.id, userId));
+
+			await logAudit(request.headers.get('x-user-id'), 'DELETE', 'user', userId);
 		} catch (error) {
 			console.error('Delete user failed:', error);
 			return fail(500, { message: 'Failed to delete user' });

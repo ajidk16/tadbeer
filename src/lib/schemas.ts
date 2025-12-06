@@ -73,3 +73,38 @@ export const updateUserRoleSchema = v.object({
 
 export type InviteUserSchema = typeof inviteUserSchema;
 export type UpdateUserRoleSchema = typeof updateUserRoleSchema;
+
+export const roleSchema = v.object({
+	id: v.optional(v.number()),
+	name: v.pipe(v.string(), v.minLength(3, 'Name must be at least 3 characters')),
+	description: v.optional(v.string()),
+	permissions: v.optional(v.array(v.string()))
+});
+
+export type RoleSchema = typeof roleSchema;
+
+export const permissionSchema = v.object({
+	id: v.optional(v.number()),
+	slug: v.pipe(v.string(), v.minLength(3, 'Slug must be at least 3 characters')),
+	name: v.pipe(v.string(), v.minLength(3, 'Name must be at least 3 characters')),
+	description: v.optional(v.string()),
+	group: v.pipe(v.string(), v.minLength(1, 'Group is required'))
+});
+
+export type PermissionSchema = typeof permissionSchema;
+
+export const profileSchema = v.object({
+	fullName: v.pipe(v.string(), v.minLength(3, 'Full name must be at least 3 characters')),
+	phone: v.optional(v.string()),
+	about: v.optional(v.string())
+});
+
+export type ProfileSchema = typeof profileSchema;
+
+export const securitySchema = v.object({
+	currentPassword: v.pipe(v.string(), v.minLength(1, 'Current password is required')),
+	newPassword: v.pipe(v.string(), v.minLength(8, 'Password must be at least 8 characters')),
+	confirmPassword: v.pipe(v.string(), v.minLength(1, 'Please confirm your password'))
+});
+
+export type SecuritySchema = typeof securitySchema;

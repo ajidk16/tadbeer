@@ -8,15 +8,20 @@ import {
 	donation,
 	donationCampaign,
 	announcement,
-	auditLog
+	auditLog,
+	roles
 } from './schema';
 
-export const userRelations = relations(user, ({ many }) => ({
+export const userRelations = relations(user, ({ many, one }) => ({
 	sessions: many(session),
 	recordedTransactions: many(financialTransaction),
 	verifiedDonations: many(donation),
 	authoredAnnouncements: many(announcement),
-	auditLogs: many(auditLog)
+	auditLogs: many(auditLog),
+	role: one(roles, {
+		fields: [user.roleId],
+		references: [roles.id]
+	})
 }));
 
 export const sessionRelations = relations(session, ({ one }) => ({
