@@ -1,5 +1,6 @@
 import { db } from './db.ts';
 import * as table from '../schema.ts';
+import { eq } from 'drizzle-orm';
 
 export async function seedMosqueProfile() {
 	console.log('Seeding mosque profile...');
@@ -25,7 +26,7 @@ export async function seedMosqueProfile() {
 			await db
 				.update(table.mosqueProfile)
 				.set(profile)
-				.where(table.eq(table.mosqueProfile.id, existing[0].id));
+				.where(eq(table.mosqueProfile.id, existing[0].id));
 		}
 
 		console.log('Mosque profile seeded successfully.');

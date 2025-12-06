@@ -85,9 +85,9 @@
 	});
 </script>
 
-<aside class="bg-base-200 w-64 min-h-full flex flex-col">
+<aside class="bg-base-100 w-64 min-h-full flex flex-col border-r border-base-200">
 	<!-- Logo -->
-	<div class="p-4 border-b border-base-300">
+	<div class="p-4 border-b border-base-200 islamic-pattern bg-primary/5">
 		<a href="/" class="flex items-center gap-3 text-xl font-bold text-primary">
 			<span class="text-2xl">🕌</span>
 			<span>TadBeer</span>

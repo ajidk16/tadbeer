@@ -2,7 +2,7 @@
 	import { Facebook, Instagram, Twitter, Youtube, Mail, MapPin, Phone } from 'lucide-svelte';
 </script>
 
-<footer class="bg-base-200 pt-16 pb-8 text-base-content">
+<footer class="bg-base-100 border-t border-base-200 pt-16 pb-8 text-base-content">
 	<div class="container mx-auto px-4">
 		<div class="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
 			<!-- Brand -->

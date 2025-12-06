@@ -64,7 +64,9 @@
 	}
 </script>
 
-<nav class="navbar bg-base-200 sticky top-0 z-50 border-b border-base-300 px-4 flex justify-between items-center">
+<nav
+	class="navbar glass sticky top-0 z-50 px-4 flex justify-between items-center border-b-0 shadow-sm"
+>
 	<!-- Left: Menu toggle (mobile) + Logo -->
 	<div class="navbar-start gap-2 block lg:hidden">
 		<button

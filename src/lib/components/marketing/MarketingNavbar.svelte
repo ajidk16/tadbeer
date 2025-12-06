@@ -13,17 +13,18 @@
 		{ href: '/events', label: 'Kegiatan' },
 		{ href: '/donation', label: 'Donasi' },
 		{ href: '/inventory', label: 'Inventaris' },
-		{ href: '/about', label: 'Tentang' },
+		{ href: '/about', label: 'Tentang' }
 		// { href: '/contact', label: 'Kontak' }
 	];
 	function isActive(href: string) {
 		return (page.url.pathname as string) === href && href !== '#';
 	}
+
+	const user = $derived(page.data.profile);
+	console.log('user navbar', user);
 </script>
 
-<nav
-	class="navbar fixed top-0 z-50 w-full border-b border-base-200 bg-base-100/80 backdrop-blur-md"
->
+<nav class="navbar fixed top-0 z-50 w-full border-b-0 shadow-sm glass">
 	<div class="container mx-auto px-4">
 		<div class="flex w-full items-center justify-between">
 			<!-- Logo -->
@@ -47,13 +48,27 @@
 
 			<!-- Desktop CTA -->
 			<div class="hidden items-center gap-4 md:flex">
-				<a href="/auth/login" class="btn btn-ghost btn-sm">Masuk</a>
-				<a
-					href="/auth/register"
-					class="btn btn-primary btn-sm text-white shadow-lg shadow-primary/20"
-				>
-					Daftar Sekarang
-				</a>
+				{#if user}
+					<a
+						href="/admin/dashboard"
+						class="btn btn-outline"
+					>
+						Dashboard
+					</a>
+				{:else}
+					<a
+						href="/auth/login"
+						class="btn btn-outline"
+					>
+						Masuk
+					</a>
+					<a
+						href="/auth/register"
+						class="btn btn-primary text-white"
+					>
+						Daftar Sekarang
+					</a>
+				{/if}
 			</div>
 
 			<!-- Mobile Menu Button -->
