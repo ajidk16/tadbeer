@@ -1,62 +1,25 @@
 <script lang="ts">
 	import {
-		Calendar,
+		Calendar as CalendarIcon,
 		MapPin,
 		Clock,
 		Users,
 		ChevronLeft,
 		ChevronRight,
 		List,
-		Grid
+		Grid,
+		X
 	} from 'lucide-svelte';
 	import { Badge } from '$lib/components/ui';
+	import { goto } from '$app/navigation';
 
-	// Mock Data
-	const events = [
-		{
-			id: 1,
-			title: "Kajian Rutin Ba'da Maghrib",
-			date: new Date(2023, 11, 15, 18, 30),
-			location: 'Ruang Utama Masjid',
-			speaker: 'Ustadz Abdullah',
-			type: 'kajian',
-			image:
-				'https://images.unsplash.com/photo-1564121211835-e88c852648ab?w=800&auto=format&fit=crop&q=60'
-		},
-		{
-			id: 2,
-			title: 'Sholat Jumat Berjamaah',
-			date: new Date(2023, 11, 17, 11, 45),
-			location: 'Ruang Utama & Lantai 2',
-			speaker: 'Khatib: Ustadz Fulan',
-			type: 'ibadah',
-			image:
-				'https://images.unsplash.com/photo-1584661009405-24227445c743?w=800&auto=format&fit=crop&q=60'
-		},
-		{
-			id: 3,
-			title: 'Buka Puasa Bersama Senin Kamis',
-			date: new Date(2023, 11, 18, 17, 45),
-			location: 'Selasar Masjid',
-			speaker: '-',
-			type: 'sosial',
-			image:
-				'https://images.unsplash.com/photo-1519817650390-64a93db51149?w=800&auto=format&fit=crop&q=60'
-		},
-		{
-			id: 4,
-			title: 'Tabligh Akbar Akhir Tahun',
-			date: new Date(2023, 11, 31, 19, 30),
-			location: 'Halaman Utama',
-			speaker: 'Syekh Ali Jaber (Alm)',
-			type: 'event',
-			image:
-				'https://images.unsplash.com/photo-1542810634-71277d95dcbb?w=800&auto=format&fit=crop&q=60'
-		}
-	];
+	let { data } = $props();
 
+	// State
 	let viewMode = $state<'list' | 'calendar'>('list');
 	let currentDate = $state(new Date());
+	let selectedDate = $state<Date | null>(null);
+	let showModal = $state(false);
 
 	const monthNames = [
 		'Januari',
@@ -73,36 +36,90 @@
 		'Desember'
 	];
 
-	function formatDate(date: Date) {
+	// Derived
+	let events = $derived(data.events || []);
+
+	// Calendar Helpers
+	const currentYear = $derived(currentDate.getFullYear());
+	const currentMonth = $derived(currentDate.getMonth());
+
+	const daysInMonth = $derived(new Date(currentYear, currentMonth + 1, 0).getDate());
+	const firstDayOfMonth = $derived(new Date(currentYear, currentMonth, 1).getDay());
+
+	const calendarDays = $derived.by(() => {
+		const days: (number | null)[] = [];
+		for (let i = 0; i < firstDayOfMonth; i++) days.push(null);
+		for (let i = 1; i <= daysInMonth; i++) days.push(i);
+		return days;
+	});
+
+	function getEventsForDisplay(date: Date) {
+		return events.filter((e) => {
+			const eDate = new Date(e.startTime);
+			return (
+				eDate.getDate() === date.getDate() &&
+				eDate.getMonth() === date.getMonth() &&
+				eDate.getFullYear() === date.getFullYear()
+			);
+		});
+	}
+
+	function getEventsForDay(day: number) {
+		return getEventsForDisplay(new Date(currentYear, currentMonth, day));
+	}
+
+	function formatDate(date: Date | string) {
 		return new Intl.DateTimeFormat('id-ID', {
 			weekday: 'long',
 			day: 'numeric',
 			month: 'long',
 			year: 'numeric'
-		}).format(date);
+		}).format(new Date(date));
 	}
 
-	function formatTime(date: Date) {
+	function formatTime(date: Date | string) {
 		return new Intl.DateTimeFormat('id-ID', {
 			hour: '2-digit',
 			minute: '2-digit'
-		}).format(date);
+		}).format(new Date(date));
 	}
 
+	const eventTypeConfig: Record<string, { label: string; variant: string }> = {
+		kajian: { label: 'Kajian', variant: 'primary' },
+		ibadah: { label: 'Ibadah', variant: 'success' },
+		sosial: { label: 'Sosial', variant: 'warning' },
+		phbi: { label: 'PHBI', variant: 'accent' },
+		rapat: { label: 'Rapat', variant: 'neutral' },
+		lainnya: { label: 'Lainnya', variant: 'neutral' }
+	};
+
 	function getBadgeVariant(type: string) {
-		switch (type) {
-			case 'kajian':
-				return 'primary';
-			case 'ibadah':
-				return 'success';
-			case 'sosial':
-				return 'warning';
-			case 'event':
-				return 'accent';
-			default:
-				return 'neutral';
-		}
+		return eventTypeConfig[type]?.variant || 'neutral';
 	}
+
+	function getBadgeLabel(type: string) {
+		return eventTypeConfig[type]?.label || type;
+	}
+
+	function prevMonth() {
+		currentDate = new Date(currentYear, currentMonth - 1, 1);
+	}
+
+	function nextMonth() {
+		currentDate = new Date(currentYear, currentMonth + 1, 1);
+	}
+
+	function handleDateClick(day: number) {
+		selectedDate = new Date(currentYear, currentMonth, day);
+		showModal = true;
+	}
+
+	function closeModal() {
+		showModal = false;
+		selectedDate = null;
+	}
+
+	let dateEvents = $derived(selectedDate ? getEventsForDisplay(selectedDate) : []);
 </script>
 
 <svelte:head>
@@ -138,64 +155,87 @@
 	{#if viewMode === 'list'}
 		<!-- List View -->
 		<div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-			{#each events as event}
-				<div
-					class="card bg-base-100 shadow-sm hover:shadow-md transition-all hover:-translate-y-1 border border-base-200 overflow-hidden group"
-				>
-					<figure class="relative h-48 overflow-hidden">
-						<img
-							src={event.image}
-							alt={event.title}
-							class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-						/>
-						<div class="absolute top-3 right-3">
-							<Badge variant={getBadgeVariant(event.type) as any} class="shadow-sm">
-								{event.type.toUpperCase()}
-							</Badge>
-						</div>
-					</figure>
-					<div class="card-body p-5">
-						<div class="flex items-center gap-2 text-sm text-base-content/60 mb-2">
-							<Calendar class="w-4 h-4" />
-							<span>{formatDate(event.date)}</span>
-						</div>
-						<h3 class="card-title text-lg font-bold mb-2 line-clamp-2">
-							{event.title}
-						</h3>
-						<div class="space-y-2 text-sm text-base-content/70 mb-4">
-							<div class="flex items-center gap-2">
-								<Clock class="w-4 h-4 text-primary" />
-								<span>{formatTime(event.date)} WIB</span>
+			{#if events.length === 0}
+				<div class="col-span-full text-center py-12 text-base-content/50">
+					<p class="text-4xl mb-2">📭</p>
+					<p>Belum ada kegiatan terjadwal.</p>
+				</div>
+			{:else}
+				{#each events as event}
+					<div
+						class="card bg-base-100 shadow-sm hover:shadow-md transition-all hover:-translate-y-1 border border-base-200 overflow-hidden group"
+					>
+						<figure class="relative h-48 overflow-hidden bg-base-300">
+							{#if event.imageUrl}
+								<img
+									src={event.imageUrl}
+									alt={event.title}
+									class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+								/>
+							{:else}
+								<div class="flex items-center justify-center w-full h-full text-base-content/20">
+									<CalendarIcon class="w-12 h-12" />
+								</div>
+							{/if}
+							<div class="absolute top-3 right-3">
+								<Badge variant={getBadgeVariant(event.type) as any} class="shadow-sm">
+									{getBadgeLabel(event.type)}
+								</Badge>
 							</div>
-							<div class="flex items-center gap-2">
-								<MapPin class="w-4 h-4 text-primary" />
-								<span>{event.location}</span>
+						</figure>
+						<div class="card-body p-5">
+							<div class="flex items-center gap-2 text-sm text-base-content/60 mb-2">
+								<CalendarIcon class="w-4 h-4" />
+								<span>{formatDate(event.startTime)}</span>
 							</div>
-							<div class="flex items-center gap-2">
-								<Users class="w-4 h-4 text-primary" />
-								<span>{event.speaker}</span>
+							<h3 class="card-title text-lg font-bold mb-2 line-clamp-2">
+								{event.title}
+							</h3>
+							<div class="space-y-2 text-sm text-base-content/70 mb-4">
+								<div class="flex items-center gap-2">
+									<Clock class="w-4 h-4 text-primary" />
+									<span>{formatTime(event.startTime)} - {formatTime(event.endTime)}</span>
+								</div>
+								{#if event.location}
+									<div class="flex items-center gap-2">
+										<MapPin class="w-4 h-4 text-primary" />
+										<span>{event.location}</span>
+									</div>
+								{/if}
+								{#if event.speaker}
+									<div class="flex items-center gap-2">
+										<Users class="w-4 h-4 text-primary" />
+										<span>{event.speaker}</span>
+									</div>
+								{/if}
 							</div>
-						</div>
-						<div class="card-actions justify-end mt-auto">
-							<button class="btn btn-primary btn-sm btn-outline w-full"> Lihat Detail </button>
+
+							<div class="card-actions justify-end mt-auto">
+								<button
+									onclick={() => goto(`/events/${event.title}`)}
+									class="btn btn-primary btn-sm btn-outline w-full"
+								>
+									Lihat Detail
+								</button>
+							</div>
 						</div>
 					</div>
-				</div>
-			{/each}
+				{/each}
+			{/if}
 		</div>
 	{:else}
-		<!-- Simple Calendar View Placeholder -->
+		<!-- Calendar View -->
 		<div class="card bg-base-100 border border-base-200 shadow-sm">
 			<div class="card-body">
 				<div class="flex items-center justify-between mb-6">
-					<button class="btn btn-ghost btn-circle btn-sm">
+					<button class="btn btn-ghost btn-circle btn-sm" onclick={prevMonth}>
 						<ChevronLeft class="w-5 h-5" />
 					</button>
 					<h2 class="text-xl font-bold">
-						{monthNames[currentDate.getMonth()]}
-						{currentDate.getFullYear()}
+						{monthNames[currentMonth]}
+						{currentYear}
 					</h2>
-					<button class="btn btn-ghost btn-circle btn-sm">
+					<button class="btn btn-ghost btn-circle btn-sm" onclick={nextMonth}>
 						<ChevronRight class="w-5 h-5" />
 					</button>
 				</div>
@@ -206,23 +246,51 @@
 					{/each}
 				</div>
 
-				<!-- Mock Calendar Grid (Static for demo) -->
 				<div class="grid grid-cols-7 gap-2">
-					{#each Array(35) as _, i}
+					{#each calendarDays as day}
+						{@const dayEvents = day ? getEventsForDay(day) : []}
+						<!-- svelte-ignore a11y_click_events_have_key_events -->
+						<!-- svelte-ignore a11y_no_static_element_interactions -->
 						<div
-							class="aspect-square rounded-lg border border-base-200 p-1 relative hover:bg-base-200/50 cursor-pointer transition-colors"
+							class="aspect-square rounded-lg border border-base-200 p-1 relative transition-colors flex flex-col gap-1 {day
+								? 'hover:bg-base-200/50 cursor-pointer'
+								: ''}"
+							onclick={() => day && handleDateClick(day)}
 						>
-							<span
-								class="text-sm {i === 14
-									? 'bg-primary text-white w-6 h-6 rounded-full flex items-center justify-center'
-									: ''}"
-							>
-								{i + 1}
-							</span>
-							{#if [14, 16, 17, 30].includes(i)}
-								<div
-									class="absolute bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-secondary"
-								></div>
+							{#if day}
+								<span
+									class="text-xs w-5 h-5 rounded-full flex items-center justify-center self-end {dayEvents.length >
+									0
+										? 'bg-primary text-white font-bold'
+										: 'text-base-content/70'}"
+								>
+									{day}
+								</span>
+								{#if dayEvents.length > 0}
+									<div class="flex flex-col gap-0.5 overflow-hidden">
+										{#each dayEvents.slice(0, 2) as event}
+											<!-- Using a minimal badge style to fit the grid -->
+											<span
+												class="text-[10px] px-1 py-0.5 rounded truncate bg-{getBadgeVariant(
+													event.type
+												) === 'neutral'
+													? 'base-300'
+													: getBadgeVariant(event.type) + '/20'} text-{getBadgeVariant(
+													event.type
+												) === 'neutral'
+													? 'base-content'
+													: getBadgeVariant(event.type)} font-medium"
+											>
+												{getBadgeLabel(event.type)}
+											</span>
+										{/each}
+										{#if dayEvents.length > 2}
+											<span class="text-[10px] px-1 text-base-content/60"
+												>+{dayEvents.length - 2} lainnya</span
+											>
+										{/if}
+									</div>
+								{/if}
 							{/if}
 						</div>
 					{/each}
@@ -231,3 +299,64 @@
 		</div>
 	{/if}
 </div>
+
+<!-- Date Click Modal -->
+{#if showModal && selectedDate}
+	<dialog class="modal modal-open">
+		<div class="modal-box max-w-2xl">
+			<button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2" onclick={closeModal}
+				>✕</button
+			>
+			<h3 class="font-bold text-lg mb-4">Kegiatan Tanggal {formatDate(selectedDate)}</h3>
+
+			{#if dateEvents.length === 0}
+				<div class="py-8 text-center text-base-content/60">
+					<p>Tidak ada kegiatan pada tanggal ini.</p>
+				</div>
+			{:else}
+				<div class="space-y-4">
+					{#each dateEvents as event}
+						<div class="card bg-base-200 shadow-sm border border-base-300">
+							<div class="card-body p-4">
+								<div class="flex justify-between items-start">
+									<h4 class="card-title text-base">{event.title}</h4>
+									<Badge variant={getBadgeVariant(event.type) as any}
+										>{getBadgeLabel(event.type)}</Badge
+									>
+								</div>
+								<div class="text-sm space-y-1 mt-2">
+									<div class="flex items-center gap-2">
+										<Clock class="w-4 h-4 opacity-70" />
+										<span>{formatTime(event.startTime)} - {formatTime(event.endTime)}</span>
+									</div>
+									{#if event.location}
+										<div class="flex items-center gap-2">
+											<MapPin class="w-4 h-4 opacity-70" />
+											<span>{event.location}</span>
+										</div>
+									{/if}
+									{#if event.speaker}
+										<div class="flex items-center gap-2">
+											<Users class="w-4 h-4 opacity-70" />
+											<span>{event.speaker}</span>
+										</div>
+									{/if}
+									{#if event.description}
+										<p class="pt-2 text-base-content/80 text-sm">{event.description}</p>
+									{/if}
+								</div>
+							</div>
+						</div>
+					{/each}
+				</div>
+			{/if}
+
+			<div class="modal-action">
+				<button class="btn" onclick={closeModal}>Tutup</button>
+			</div>
+		</div>
+		<form method="dialog" class="modal-backdrop">
+			<button onclick={closeModal}>close</button>
+		</form>
+	</dialog>
+{/if}

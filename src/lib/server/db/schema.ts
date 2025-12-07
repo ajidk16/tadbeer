@@ -182,6 +182,7 @@ export const event = pgTable('event', {
 	location: text('location'),
 	speaker: text('speaker'),
 	imageUrl: text('image_url'),
+	capacity: integer('capacity'),
 	createdAt: timestamp('created_at').defaultNow().notNull(),
 	updatedAt: timestamp('updated_at').defaultNow().notNull(),
 	deletedAt: timestamp('deleted_at')
@@ -203,6 +204,25 @@ export const member = pgTable('member', {
 	createdAt: timestamp('created_at').defaultNow().notNull(),
 	updatedAt: timestamp('updated_at').defaultNow().notNull(),
 	deletedAt: timestamp('deleted_at')
+});
+
+export const attendanceStatusEnum = pgEnum('attendance_status', [
+	'present',
+	'permission',
+	'absent'
+]);
+
+export const eventAttendance = pgTable('event_attendance', {
+	id: serial('id').primaryKey(),
+	eventId: integer('event_id')
+		.references(() => event.id)
+		.notNull(),
+	memberId: integer('member_id').references(() => member.id), // Link to member if applicable
+	name: text('name').notNull(), // Valid for guest or member
+	status: attendanceStatusEnum('status').default('present').notNull(),
+	notes: text('notes'),
+	createdAt: timestamp('created_at').defaultNow().notNull(),
+	updatedAt: timestamp('updated_at').defaultNow().notNull()
 });
 
 /**

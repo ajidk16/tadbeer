@@ -1,81 +1,53 @@
-import type { Actions, PageServerLoad } from './$types';
+import type { PageServerLoad, Actions } from './$types';
 import { fail } from '@sveltejs/kit';
+import { db } from '$lib/server/db';
+import { event, eventAttendance, member } from '$lib/server/db/schema';
+import { eq, desc, and, gte, lte } from 'drizzle-orm';
+import { superValidate } from 'sveltekit-superforms';
+import { valibot } from 'sveltekit-superforms/adapters';
+import { eventSchema } from '$lib/schemas';
+
+const categoryMap: Record<string, string> = {
+	Pengajian: 'kajian',
+	Kajian: 'kajian',
+	'Sholat Jumat': 'ibadah',
+	'Kegiatan Sosial': 'sosial',
+	Rapat: 'rapat',
+	Lainnya: 'lainnya'
+};
+
+const reverseCategoryMap: Record<string, string> = {
+	kajian: 'Pengajian',
+	ibadah: 'Sholat Jumat',
+	sosial: 'Kegiatan Sosial',
+	rapat: 'Rapat',
+	lainnya: 'Lainnya',
+	phbi: 'Lainnya'
+};
 
 export const load: PageServerLoad = async () => {
-	// Mock data - replace with database queries
-	const events = [
-		{
-			id: '1',
-			title: 'Kajian Malam Jumat',
-			category: 'Kajian',
-			date: new Date().toISOString(),
-			time: '19:30',
-			endTime: '21:00',
-			location: 'Masjid Al-Ikhlas',
-			description: 'Kajian rutin setiap malam Jumat membahas kitab Riyadhus Shalihin',
-			capacity: 100,
-			attendees: 45,
-			status: 'upcoming'
-		},
-		{
-			id: '2',
-			title: 'Sholat Jumat',
-			category: 'Sholat Jumat',
-			date: new Date(Date.now() + 86400000).toISOString(),
-			time: '12:00',
-			endTime: '13:00',
-			location: 'Masjid Al-Ikhlas',
-			description: 'Sholat Jumat berjamaah',
-			capacity: 500,
-			attendees: 0,
-			status: 'upcoming'
-		},
-		{
-			id: '3',
-			title: 'Pengajian Ibu-Ibu',
-			category: 'Pengajian',
-			date: new Date(Date.now() + 2 * 86400000).toISOString(),
-			time: '09:00',
-			endTime: '11:00',
-			location: 'Aula Masjid',
-			description: 'Pengajian rutin untuk ibu-ibu',
-			capacity: 50,
-			attendees: 0,
-			status: 'upcoming'
-		},
-		{
-			id: '4',
-			title: 'Rapat Pengurus DKM',
-			category: 'Rapat',
-			date: new Date(Date.now() - 86400000).toISOString(),
-			time: '19:00',
-			endTime: '21:00',
-			location: 'Ruang Sekretariat',
-			description: 'Rapat bulanan pengurus DKM',
-			capacity: 20,
-			attendees: 15,
-			status: 'completed'
-		},
-		{
-			id: '5',
-			title: 'Bakti Sosial',
-			category: 'Kegiatan Sosial',
-			date: new Date(Date.now() + 7 * 86400000).toISOString(),
-			time: '08:00',
-			endTime: '12:00',
-			location: 'Kelurahan Sukamaju',
-			description: 'Pembagian sembako untuk warga kurang mampu',
-			capacity: 30,
-			attendees: 0,
-			status: 'upcoming'
-		}
-	];
+	const events = await db.select().from(event).orderBy(desc(event.startTime));
+	const members = await db.select().from(member).where(eq(member.status, 'active'));
 
-	const upcomingCount = events.filter((e) => e.status === 'upcoming').length;
+	const now = new Date();
+	const upcomingCount = events.filter(
+		(e) => new Date(e.startTime) > now && e.status !== 'cancelled'
+	).length;
 	const completedCount = events.filter((e) => e.status === 'completed').length;
 
+	const formattedEvents = events.map((e) => ({
+		...e,
+		date: e.startTime.toISOString(),
+		time: e.startTime.toISOString().split('T')[1].slice(0, 5), // HH:mm
+		endTime: e.endTime.toISOString().split('T')[1].slice(0, 5),
+		category: reverseCategoryMap[e.type] || 'Lainnya',
+		attendees: 0 // Placeholder, query db if specific count needed
+	}));
+
 	return {
-		events,
+		form: await superValidate(valibot(eventSchema)),
+		events: formattedEvents,
+		members,
 		totalEvents: events.length,
 		upcomingCount,
 		completedCount
@@ -84,76 +56,128 @@ export const load: PageServerLoad = async () => {
 
 export const actions: Actions = {
 	create: async ({ request }) => {
-		const formData = await request.formData();
-		const title = formData.get('title') as string;
-		const category = formData.get('category') as string;
-		const date = formData.get('date') as string;
-		const time = formData.get('time') as string;
-		const endTime = formData.get('endTime') as string;
-		const location = formData.get('location') as string;
-		const description = formData.get('description') as string;
-		const capacity = formData.get('capacity') as string;
+		const form = await superValidate(request, valibot(eventSchema));
+		if (!form.valid) return fail(400, { form });
 
-		if (!title || !category || !date || !time) {
-			return fail(400, { error: 'Judul, kategori, tanggal, dan waktu wajib diisi' });
+		const { title, date, time, endTime, location, description, capacity, category } = form.data;
+
+		const startDateTime = new Date(`${date}T${time}`);
+		// Handle endTime (optional or same day)
+		let endDateTime = new Date(`${date}T${time}`);
+		if (endTime) {
+			endDateTime = new Date(`${date}T${endTime}`);
+		} else {
+			// Default 1 hour duration
+			endDateTime.setHours(endDateTime.getHours() + 1);
 		}
 
-		// TODO: Save to database
-		console.log('Creating event:', {
+		await db.insert(event).values({
 			title,
-			category,
-			date,
-			time,
-			endTime,
+			type: (categoryMap[category] || 'lainnya') as any,
+			status: 'scheduled',
+			startTime: startDateTime,
+			endTime: endDateTime,
 			location,
 			description,
-			capacity
+			capacity: capacity ? parseInt(capacity) : undefined
 		});
 
-		return { success: true, message: 'Kegiatan berhasil ditambahkan' };
+		return { form };
 	},
 
 	update: async ({ request }) => {
-		const formData = await request.formData();
-		const id = formData.get('id') as string;
-		const title = formData.get('title') as string;
-		const category = formData.get('category') as string;
-		const date = formData.get('date') as string;
-		const time = formData.get('time') as string;
-		const endTime = formData.get('endTime') as string;
-		const location = formData.get('location') as string;
-		const description = formData.get('description') as string;
-		const capacity = formData.get('capacity') as string;
+		const form = await superValidate(request, valibot(eventSchema));
+		if (!form.valid) return fail(400, { form });
 
-		if (!id || !title || !category || !date || !time) {
-			return fail(400, { error: 'Data tidak lengkap' });
+		if (!form.data.id) return fail(400, { form, error: 'ID is required' });
+
+		const { id, title, date, time, endTime, location, description, capacity, category } = form.data;
+
+		const startDateTime = new Date(`${date}T${time}`);
+		let endDateTime = new Date(`${date}T${time}`);
+		if (endTime) {
+			endDateTime = new Date(`${date}T${endTime}`);
+		} else {
+			endDateTime.setHours(endDateTime.getHours() + 1);
 		}
 
-		// TODO: Update in database
-		console.log('Updating event:', {
-			id,
-			title,
-			category,
-			date,
-			time,
-			endTime,
-			location,
-			description,
-			capacity
-		});
+		await db
+			.update(event)
+			.set({
+				title,
+				type: (categoryMap[category] || 'lainnya') as any,
+				startTime: startDateTime,
+				endTime: endDateTime,
+				location,
+				description,
+				capacity: capacity ? parseInt(capacity) : undefined,
+				updatedAt: new Date()
+			})
+			.where(eq(event.id, id));
 
-		return { success: true, message: 'Kegiatan berhasil diperbarui' };
+		return { form };
 	},
 
 	delete: async ({ request }) => {
 		const formData = await request.formData();
-		const id = formData.get('id') as string;
+		const id = formData.get('id');
+		if (!id) return fail(400, { error: 'ID required' });
 
-		if (!id) return fail(400, { error: 'ID tidak ditemukan' });
+		await db.delete(event).where(eq(event.id, Number(id)));
+		return { success: true };
+	},
 
-		// TODO: Delete from database
-		console.log('Deleting event:', id);
+	saveAttendance: async ({ request }) => {
+		const formData = await request.formData();
+		const eventId = formData.get('eventId');
+		const attendanceData = formData.get('attendance'); // Expect JSON string
 
-		return { success: true, message: 'Kegiatan berhasil dihapus' };
+		if (!eventId || !attendanceData) return fail(400, { error: 'Missing data' });
+
+		const attendees = JSON.parse(attendanceData as string);
+		// attendees: { id: string, status: string }[]
+
+		// Simple implementation: delete old, insert new (or upsert)
+		// Assuming we just track provided list
+		// In production, better to use upsert per member
+
+		const pid = Number(eventId);
+
+		for (const p of attendees) {
+			// memberId might be the 'id' in the list
+			const memberId = Number(p.id);
+			// Check if exists
+			const existing = await db
+				.select()
+				.from(eventAttendance)
+				.where(and(eq(eventAttendance.eventId, pid), eq(eventAttendance.memberId, memberId)))
+				.limit(1);
+
+			if (existing.length > 0) {
+				await db
+					.update(eventAttendance)
+					.set({
+						status: p.status as any,
+						updatedAt: new Date()
+					})
+					.where(eq(eventAttendance.id, existing[0].id));
+			} else {
+				// We need 'name' from member? or just use placeholder
+				// Assuming we have member name, or fetch it.
+				// For speed, let's just use the ID linking. Schema name is required.
+				// Fetch member name
+				const m = await db.select().from(member).where(eq(member.id, memberId)).limit(1);
+				if (m.length > 0) {
+					await db.insert(eventAttendance).values({
+						eventId: pid,
+						memberId: memberId,
+						name: m[0].fullName,
+						status: p.status as any
+					});
+				}
+			}
+		}
+
+		return { success: true };
 	}
 };

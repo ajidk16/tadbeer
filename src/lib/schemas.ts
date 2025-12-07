@@ -122,3 +122,18 @@ export const transactionSchema = v.object({
 });
 
 export type TransactionSchema = typeof transactionSchema;
+
+export const eventSchema = v.object({
+	id: v.optional(v.number()),
+	title: v.pipe(v.string(), v.minLength(3, 'Title is required')),
+	category: v.pipe(v.string(), v.minLength(1, 'Category is required')), // Maps to 'type' in DB
+	date: v.pipe(v.string(), v.minLength(1, 'Date is required')),
+	time: v.pipe(v.string(), v.minLength(1, 'Start time is required')),
+	endTime: v.optional(v.string()),
+	location: v.optional(v.string()),
+	description: v.optional(v.string()),
+	capacity: v.optional(v.string()), // Form input is text/number, handle conversion
+	speaker: v.optional(v.string())
+});
+
+export type EventSchema = typeof eventSchema;
