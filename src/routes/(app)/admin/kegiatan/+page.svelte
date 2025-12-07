@@ -238,7 +238,30 @@
 
 	function openAbsensi(event: any) {
 		selectedEvent = event;
-		// Reset attendance list status if needed, or keeping default for now
+
+		const eventRegistrants = (data.registrations || []).filter((r: any) => r.eventId === event.id);
+
+		const guests = eventRegistrants.map((r: any) => ({
+			id: `guest_${r.id}`,
+			realId: r.id,
+			name: `${r.name} (Tamu)`,
+			status: 'present',
+			type: 'guest',
+			phone: r.phone
+		}));
+
+		// Initialize with members map
+		// In real app, we should probably fetch *existing* attendance from DB first to preserve status
+		// But for now, we recreate list.
+		const members = (data.members || []).map((m: any) => ({
+			id: `member_${m.id}`,
+			realId: m.id,
+			name: m.fullName,
+			status: 'present',
+			type: 'member'
+		}));
+
+		attendanceList = [...guests, ...members];
 		showAbsensiModal = true;
 	}
 

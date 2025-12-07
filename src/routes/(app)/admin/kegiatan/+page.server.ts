@@ -1,7 +1,7 @@
 import type { PageServerLoad, Actions } from './$types';
 import { fail } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
-import { event, eventAttendance, member } from '$lib/server/db/schema';
+import { event, eventAttendance, member, eventRegistration } from '$lib/server/db/schema';
 import { eq, desc, and, gte, lte } from 'drizzle-orm';
 import { superValidate } from 'sveltekit-superforms';
 import { valibot } from 'sveltekit-superforms/adapters';
@@ -35,18 +35,23 @@ export const load: PageServerLoad = async () => {
 	).length;
 	const completedCount = events.filter((e) => e.status === 'completed').length;
 
+	// Fetch all registrations
+	// In a real app, you might want to fetch this on demand or filter by time
+	const registrations = await db.select().from(eventRegistration);
+
 	const formattedEvents = events.map((e) => ({
 		...e,
 		date: e.startTime.toISOString(),
 		time: e.startTime.toISOString().split('T')[1].slice(0, 5), // HH:mm
 		endTime: e.endTime.toISOString().split('T')[1].slice(0, 5),
 		category: reverseCategoryMap[e.type] || 'Lainnya',
-		attendees: 0 // Placeholder, query db if specific count needed
+		attendees: registrations.filter((r) => r.eventId === e.id).length // Count from registrations
 	}));
 
 	return {
 		form: await superValidate(valibot(eventSchema)),
 		events: formattedEvents,
+		registrations, // Pass to frontend to filter when opening modal
 		members,
 		totalEvents: events.length,
 		upcomingCount,
@@ -145,13 +150,35 @@ export const actions: Actions = {
 
 		for (const p of attendees) {
 			// memberId might be the 'id' in the list
-			const memberId = Number(p.id);
+			let memberId: number | null = null;
+			let name = p.name;
+
+			// Handle ID types
+			if (p.id && p.id.toString().startsWith('member_')) {
+				memberId = parseInt(p.id.toString().replace('member_', ''));
+			} else if (p.id && p.id.toString().startsWith('guest_')) {
+				// It's a guest, no memberId. We use the name.
+				// We could strip "(Tamu)" suffix if we added it in UI, but simpler to just use p.name
+				// But in UI we added "(Tamu)". Let's clean it.
+				name = p.name.replace(' (Tamu)', '');
+			} else {
+				// Should not happen with new logic, but fallback
+				if (!isNaN(parseInt(p.id))) memberId = parseInt(p.id);
+			}
+
 			// Check if exists
-			const existing = await db
-				.select()
-				.from(eventAttendance)
-				.where(and(eq(eventAttendance.eventId, pid), eq(eventAttendance.memberId, memberId)))
-				.limit(1);
+			// If memberId is present, check by memberId.
+			// If guest (memberId null), check by name? Or we need a way to track guests reliably?
+			// For now, checking by memberId if partial, or name+eventId if guest.
+
+			let whereClause;
+			if (memberId) {
+				whereClause = and(eq(eventAttendance.eventId, pid), eq(eventAttendance.memberId, memberId));
+			} else {
+				whereClause = and(eq(eventAttendance.eventId, pid), eq(eventAttendance.name, name));
+			}
+
+			const existing = await db.select().from(eventAttendance).where(whereClause).limit(1);
 
 			if (existing.length > 0) {
 				await db
@@ -162,19 +189,20 @@ export const actions: Actions = {
 					})
 					.where(eq(eventAttendance.id, existing[0].id));
 			} else {
-				// We need 'name' from member? or just use placeholder
-				// Assuming we have member name, or fetch it.
-				// For speed, let's just use the ID linking. Schema name is required.
-				// Fetch member name
-				const m = await db.select().from(member).where(eq(member.id, memberId)).limit(1);
-				if (m.length > 0) {
-					await db.insert(eventAttendance).values({
-						eventId: pid,
-						memberId: memberId,
-						name: m[0].fullName,
-						status: p.status as any
-					});
+				// If member, fetch name if not provided? We have it in `p.name` but might be formatted.
+				// Fetch member name to be sure if member
+				let dbName = name;
+				if (memberId) {
+					const m = await db.select().from(member).where(eq(member.id, memberId)).limit(1);
+					if (m.length > 0) dbName = m[0].fullName;
 				}
+
+				await db.insert(eventAttendance).values({
+					eventId: pid,
+					memberId: memberId,
+					name: dbName,
+					status: p.status as any
+				});
 			}
 		}
 

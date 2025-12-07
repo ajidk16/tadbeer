@@ -226,6 +226,21 @@ export const eventAttendance = pgTable('event_attendance', {
 });
 
 /**
+ * Event Registrations (Public/Guest)
+ */
+export const eventRegistration = pgTable('event_registration', {
+	id: serial('id').primaryKey(),
+	eventId: integer('event_id')
+		.references(() => event.id)
+		.notNull(),
+	name: text('name').notNull(),
+	email: text('email'),
+	phone: text('phone').notNull(),
+	notes: text('notes'),
+	createdAt: timestamp('created_at').defaultNow().notNull()
+});
+
+/**
  * Inventory Items
  */
 export const inventoryItem = pgTable('inventory_item', {

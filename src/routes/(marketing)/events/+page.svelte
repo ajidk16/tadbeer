@@ -178,9 +178,7 @@
 								</div>
 							{/if}
 							<div class="absolute top-3 right-3">
-								<Badge variant={getBadgeVariant(event.type) as any} class="shadow-sm">
-									{getBadgeLabel(event.type)}
-								</Badge>
+								<div class="badge w-full badge-{eventTypeConfig[event.type]?.variant || 'neutral'}">{event.type}</div>
 							</div>
 						</figure>
 						<div class="card-body p-5">
@@ -212,7 +210,7 @@
 
 							<div class="card-actions justify-end mt-auto">
 								<button
-									onclick={() => goto(`/events/${event.title}`)}
+									onclick={() => goto(`/events/${event.id}`)}
 									class="btn btn-primary btn-sm btn-outline w-full"
 								>
 									Lihat Detail
@@ -261,7 +259,7 @@
 								<span
 									class="text-xs w-5 h-5 rounded-full flex items-center justify-center self-end {dayEvents.length >
 									0
-										? 'bg-primary text-white font-bold'
+										? `bg-${eventTypeConfig[dayEvents[0].type]?.variant || 'neutral'} text-white font-bold`
 										: 'text-base-content/70'}"
 								>
 									{day}
@@ -269,20 +267,7 @@
 								{#if dayEvents.length > 0}
 									<div class="flex flex-col gap-0.5 overflow-hidden">
 										{#each dayEvents.slice(0, 2) as event}
-											<!-- Using a minimal badge style to fit the grid -->
-											<span
-												class="text-[10px] px-1 py-0.5 rounded truncate bg-{getBadgeVariant(
-													event.type
-												) === 'neutral'
-													? 'base-300'
-													: getBadgeVariant(event.type) + '/20'} text-{getBadgeVariant(
-													event.type
-												) === 'neutral'
-													? 'base-content'
-													: getBadgeVariant(event.type)} font-medium"
-											>
-												{getBadgeLabel(event.type)}
-											</span>
+											<div class="badge w-full badge-{eventTypeConfig[event.type]?.variant || 'neutral'}">{event.type}</div>
 										{/each}
 										{#if dayEvents.length > 2}
 											<span class="text-[10px] px-1 text-base-content/60"
@@ -320,9 +305,7 @@
 							<div class="card-body p-4">
 								<div class="flex justify-between items-start">
 									<h4 class="card-title text-base">{event.title}</h4>
-									<Badge variant={getBadgeVariant(event.type) as any}
-										>{getBadgeLabel(event.type)}</Badge
-									>
+									<div class="badge w-full badge-{eventTypeConfig[event.type]?.variant || 'neutral'}">{event.type}</div>
 								</div>
 								<div class="text-sm space-y-1 mt-2">
 									<div class="flex items-center gap-2">
