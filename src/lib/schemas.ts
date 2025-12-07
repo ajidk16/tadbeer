@@ -4,7 +4,7 @@ export const registerSchema = v.pipe(
 	v.object({
 		name: v.pipe(v.string(), v.minLength(3, 'Name must be at least 3 characters')),
 		email: v.pipe(v.string(), v.email('Invalid email address')),
-		password: v.pipe(v.string(), v.minLength(8, 'Password must be at least 8 characters')),
+		password: v.pipe(v.string(), v.minLength(6, 'Password must be at least 6 characters')),
 		confirmPassword: v.string()
 	}),
 	v.forward(
@@ -31,7 +31,7 @@ export const changePasswordSchema = v.pipe(
 	v.object({
 		email: v.pipe(v.string(), v.email()),
 		otp: v.pipe(v.string(), v.length(6, 'OTP must be 6 digits')),
-		newPassword: v.pipe(v.string(), v.minLength(8, 'Password must be at least 8 characters')),
+		newPassword: v.pipe(v.string(), v.minLength(6, 'Password must be at least 6 characters')),
 		confirmPassword: v.string()
 	}),
 	v.forward(
@@ -103,7 +103,7 @@ export type ProfileSchema = typeof profileSchema;
 
 export const securitySchema = v.object({
 	currentPassword: v.pipe(v.string(), v.minLength(1, 'Current password is required')),
-	newPassword: v.pipe(v.string(), v.minLength(8, 'Password must be at least 8 characters')),
+	newPassword: v.pipe(v.string(), v.minLength(6, 'Password must be at least 6 characters')),
 	confirmPassword: v.pipe(v.string(), v.minLength(1, 'Please confirm your password'))
 });
 

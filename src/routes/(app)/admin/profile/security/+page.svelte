@@ -1,9 +1,25 @@
 <script lang="ts">
 	import { ArrowLeft, Key, Lock, Save, Eye, EyeOff } from 'lucide-svelte';
 
-	let currentPassword = $state('');
-	let newPassword = $state('');
-	let confirmPassword = $state('');
+	import { superForm } from 'sveltekit-superforms';
+	import { valibotClient } from 'sveltekit-superforms/adapters';
+	import { securitySchema } from '$lib/schemas';
+	import { success as toastSuccess, error as toastError } from '$lib/components/ui';
+
+	let { data } = $props();
+
+	const { form, errors, enhance, submitting, message } = superForm(data.form, {
+		validators: valibotClient(securitySchema),
+		onResult: ({ result }) => {
+			if (result.type === 'success') {
+				toastSuccess(result.data?.message || 'Password updated successfully');
+				// Reset form on success or not? Usually better to verify credentials again if they want to change again.
+				// But superforms resets by default on success unless configured otherwise.
+			} else if (result.type === 'failure') {
+				toastError(result.data?.message || 'Failed to update password');
+			}
+		}
+	});
 
 	let showCurrent = $state(false);
 	let showNew = $state(false);
@@ -28,103 +44,125 @@
 			</h3>
 
 			<div class="space-y-4">
-				<div class="form-control">
-					<label class="label" for="current">
-						<span class="label-text font-medium">Current Password</span>
-					</label>
-					<div class="relative">
-						<input
-							type={showCurrent ? 'text' : 'password'}
-							id="current"
-							bind:value={currentPassword}
-							class="input input-bordered w-full pl-10 pr-10"
-						/>
-						<Lock
-							class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-base-content/50 z-20"
-						/>
+				<form method="POST" use:enhance class="contents">
+					<div class="form-control">
+						<label class="label" for="current">
+							<span class="label-text font-medium">Current Password</span>
+						</label>
+						<div class="relative">
+							<input
+								type={showCurrent ? 'text' : 'password'}
+								id="current"
+								name="currentPassword"
+								bind:value={$form.currentPassword}
+								class="input input-bordered w-full pl-10 pr-10"
+							/>
+							<Lock
+								class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-base-content/50 z-20"
+							/>
+							<button
+								class="absolute right-3 top-1/2 -translate-y-1/2 text-base-content/50 hover:text-base-content z-20"
+								onclick={() => (showCurrent = !showCurrent)}
+								type="button"
+							>
+								{#if showCurrent}
+									<EyeOff class="w-4 h-4" />
+								{:else}
+									<Eye class="w-4 h-4" />
+								{/if}
+							</button>
+						</div>
+						{#if $errors.currentPassword}
+							<span class="text-error text-sm mt-1">
+								{$errors.currentPassword}
+							</span>
+						{/if}
+					</div>
+
+					<div class="divider"></div>
+
+					<div class="form-control">
+						<label class="label" for="new">
+							<span class="label-text font-medium">New Password</span>
+						</label>
+						<div class="relative">
+							<input
+								type={showNew ? 'text' : 'password'}
+								id="new"
+								name="newPassword"
+								bind:value={$form.newPassword}
+								class="input input-bordered w-full pl-10 pr-10"
+							/>
+							<Lock
+								class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-base-content/50 z-20"
+							/>
+							<button
+								class="absolute right-3 top-1/2 -translate-y-1/2 text-base-content/50 hover:text-base-content z-20"
+								onclick={() => (showNew = !showNew)}
+								type="button"
+							>
+								{#if showNew}
+									<EyeOff class="w-4 h-4" />
+								{:else}
+									<Eye class="w-4 h-4" />
+								{/if}
+							</button>
+						</div>
+
+						{#if $errors.newPassword}
+							<span class="text-error text-sm mt-1">{$errors.newPassword}</span>
+						{/if}
+					</div>
+
+					<div class="form-control">
+						<label class="label" for="confirm">
+							<span class="label-text font-medium">Confirm New Password</span>
+						</label>
+						<div class="relative">
+							<input
+								type={showConfirm ? 'text' : 'password'}
+								id="confirm"
+								name="confirmPassword"
+								bind:value={$form.confirmPassword}
+								class="input input-bordered w-full pl-10 pr-10"
+							/>
+							<Lock
+								class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-base-content/50 z-20"
+							/>
+							<button
+								class="absolute right-3 top-1/2 -translate-y-1/2 text-base-content/50 hover:text-base-content z-20"
+								onclick={() => (showConfirm = !showConfirm)}
+								type="button"
+							>
+								{#if showConfirm}
+									<EyeOff class="w-4 h-4" />
+								{:else}
+									<Eye class="w-4 h-4" />
+								{/if}
+							</button>
+						</div>
+						{#if $errors.confirmPassword}<span class="text-error text-sm mt-1"
+								>{$errors.confirmPassword}</span
+							>{/if}
+					</div>
+
+					<div class="card-actions justify-end mt-4">
 						<button
-							class="absolute right-3 top-1/2 -translate-y-1/2 text-base-content/50 hover:text-base-content z-20"
-							onclick={() => (showCurrent = !showCurrent)}
-							type="button"
+							class="btn btn-primary"
+							disabled={$submitting ||
+								!$form.currentPassword ||
+								!$form.newPassword ||
+								!$form.confirmPassword}
 						>
-							{#if showCurrent}
-								<EyeOff class="w-4 h-4" />
+							{#if $submitting}
+								<span class="loading loading-spinner loading-xs"></span>
 							{:else}
-								<Eye class="w-4 h-4" />
+								<Save class="w-4 h-4 mr-2" />
 							{/if}
+							Update Password
 						</button>
 					</div>
-				</div>
-
-				<div class="divider"></div>
-
-				<div class="form-control">
-					<label class="label" for="new">
-						<span class="label-text font-medium">New Password</span>
-					</label>
-					<div class="relative">
-						<input
-							type={showNew ? 'text' : 'password'}
-							id="new"
-							bind:value={newPassword}
-							class="input input-bordered w-full pl-10 pr-10"
-						/>
-						<Lock
-							class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-base-content/50 z-20"
-						/>
-						<button
-							class="absolute right-3 top-1/2 -translate-y-1/2 text-base-content/50 hover:text-base-content z-20"
-							onclick={() => (showNew = !showNew)}
-							type="button"
-						>
-							{#if showNew}
-								<EyeOff class="w-4 h-4" />
-							{:else}
-								<Eye class="w-4 h-4" />
-							{/if}
-						</button>
-					</div>
-					<label for="new" class="label">
-						<span class="label-text-alt">Must be at least 8 characters long.</span>
-					</label>
-				</div>
-
-				<div class="form-control">
-					<label class="label" for="confirm">
-						<span class="label-text font-medium">Confirm New Password</span>
-					</label>
-					<div class="relative">
-						<input
-							type={showConfirm ? 'text' : 'password'}
-							id="confirm"
-							bind:value={confirmPassword}
-							class="input input-bordered w-full pl-10 pr-10"
-						/>
-						<Lock
-							class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-base-content/50 z-20"
-						/>
-						<button
-							class="absolute right-3 top-1/2 -translate-y-1/2 text-base-content/50 hover:text-base-content z-20"
-							onclick={() => (showConfirm = !showConfirm)}
-							type="button"
-						>
-							{#if showConfirm}
-								<EyeOff class="w-4 h-4" />
-							{:else}
-								<Eye class="w-4 h-4" />
-							{/if}
-						</button>
-					</div>
-				</div>
-
-				<div class="card-actions justify-end mt-4">
-					<button
-						class="btn btn-primary"
-						disabled={!currentPassword || !newPassword || !confirmPassword}
-					>
-						<Save class="w-4 h-4 mr-2" /> Update Password
-					</button>
-				</div>
+				</form>
 			</div>
 		</div>
 	</div>
