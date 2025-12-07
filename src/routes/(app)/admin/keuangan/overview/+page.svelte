@@ -3,7 +3,6 @@
 	import { StatsCard, Chart } from '$lib/components/ui';
 	import { Wallet, TrendingUp, TrendingDown, BarChart3, Plus, ArrowRight } from 'lucide-svelte';
 
-
 	// Chart data for cashflow
 	const cashflowSeries = $derived([
 		{
@@ -60,6 +59,59 @@
 		}
 	});
 
+	import { goto } from '$app/navigation';
+
+	// Handle Period Change
+	function handlePeriodChange(event: Event) {
+		const target = event.target as HTMLSelectElement;
+		const url = new URL(page.url);
+		url.searchParams.set('period', target.value);
+		goto(url);
+	}
+
+	// Export Functions
+	function exportToCSV() {
+		// Create CSV content from stats and recent transactions
+		const statsHeader = ['Metric', 'Value'];
+		const statsRows = [
+			['Saldo Kas', page.data.stats?.balance || 0],
+			['Total Pemasukan', page.data.stats?.totalIncome || 0],
+			['Total Pengeluaran', page.data.stats?.totalExpense || 0],
+			['Trend', page.data.stats?.trendPercentage || '0%']
+		];
+
+		const txHeader = ['Tanggal', 'Keterangan', 'Kategori', 'Tipe', 'Jumlah'];
+		const txRows = (page.data.recentTransactions || []).map((tx: any) => [
+			tx.date,
+			`"${tx.description}"`,
+			tx.category,
+			tx.type,
+			tx.amount
+		]);
+
+		const csvContent = [
+			'STATS',
+			statsHeader.join(','),
+			...statsRows.map((r: any[]) => r.join(',')),
+			'',
+			'RECENT TRANSACTIONS',
+			txHeader.join(','),
+			...txRows.map((r: any[]) => r.join(','))
+		].join('\n');
+
+		const blob = new Blob([csvContent], { type: 'text/csv' });
+		const url = window.URL.createObjectURL(blob);
+		const a = document.createElement('a');
+		a.href = url;
+		a.download = `overview_keuangan_${new Date().toISOString().split('T')[0]}.csv`;
+		a.click();
+		window.URL.revokeObjectURL(url);
+	}
+
+	function printReport() {
+		window.print();
+	}
+
 	// Format currency
 	function formatCurrency(value: number): string {
 		return new Intl.NumberFormat('id-ID', {
@@ -83,6 +135,28 @@
 
 <svelte:head>
 	<title>Keuangan | TadBeer</title>
+	<style>
+		@media print {
+			/* Hide non-essential elements for report */
+			.navbar,
+			.drawer-side,
+			.btn,
+			select,
+			.no-print {
+				display: none !important;
+			}
+			.card {
+				box-shadow: none !important;
+				border: 1px solid #ddd;
+				break-inside: avoid;
+			}
+			/* Ensure background colors print */
+			* {
+				-webkit-print-color-adjust: exact !important;
+				print-color-adjust: exact !important;
+			}
+		}
+	</style>
 </svelte:head>
 
 <div class="space-y-6">
@@ -90,18 +164,28 @@
 	<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
 		<div>
 			<h1 class="text-2xl font-bold">📊 Overview Keuangan</h1>
-			<p class="text-base-content/60 mt-1">Ringkasan keuangan masjid bulan ini</p>
+			<p class="text-base-content/60 mt-1">Ringkasan keuangan masjid</p>
 		</div>
-		<div class="flex gap-2">
-			<select class="select select-bordered select-sm">
+		<div class="flex gap-2 no-print">
+			<select
+				class="select select-bordered select-sm"
+				value={page.data.period}
+				onchange={handlePeriodChange}
+			>
 				<option value="month">Bulan Ini</option>
 				<option value="quarter">3 Bulan</option>
 				<option value="year">Tahun Ini</option>
 			</select>
-			<button class="btn btn-sm btn-ghost">
-				<BarChart3 class="w-4 h-4" />
-				Export
-			</button>
+			<div class="dropdown dropdown-end">
+				<button class="btn btn-sm btn-ghost">
+					<BarChart3 class="w-4 h-4" />
+					Export
+				</button>
+				<ul class="dropdown-content menu bg-base-100 rounded-box shadow-lg z-10 w-48 p-2">
+					<li><button onclick={exportToCSV}>📊 Download CSV</button></li>
+					<li><button onclick={printReport}>🖨️ Print PDF</button></li>
+				</ul>
+			</div>
 		</div>
 	</div>
 

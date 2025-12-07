@@ -1,114 +1,173 @@
-import type { Actions, PageServerLoad } from './$types';
 import { fail } from '@sveltejs/kit';
+import { superValidate } from 'sveltekit-superforms';
+import { valibot } from 'sveltekit-superforms/adapters';
+import { db } from '$lib/server/db';
+import * as table from '$lib/server/db/schema';
+import { transactionSchema } from '$lib/schemas';
+import { uploadImageFromBuffer, deleteImage, getPublicIdFromUrl } from '$lib/server/cloudinary';
+import { eq, desc, and, sql } from 'drizzle-orm';
 
-export const load: PageServerLoad = async () => {
-	// Mock data - replace with database queries
-	const transactions = [
-		{
-			id: '1',
-			date: new Date().toISOString(),
-			description: 'Pembayaran Listrik',
-			category: 'Operasional',
-			amount: 850000,
-			notes: 'PLN bulan November'
-		},
-		{
-			id: '2',
-			date: new Date(Date.now() - 86400000).toISOString(),
-			description: 'Pembelian Sajadah',
-			category: 'Proyek',
-			amount: 1500000,
-			notes: '20 lembar sajadah'
-		},
-		{
-			id: '3',
-			date: new Date(Date.now() - 2 * 86400000).toISOString(),
-			description: 'Gaji Marbot',
-			category: 'Gaji',
-			amount: 2000000,
-			notes: 'Bulan November'
-		},
-		{
-			id: '4',
-			date: new Date(Date.now() - 3 * 86400000).toISOString(),
-			description: 'Pembayaran Air PDAM',
-			category: 'Operasional',
-			amount: 350000,
-			notes: null
-		},
-		{
-			id: '5',
-			date: new Date(Date.now() - 4 * 86400000).toISOString(),
-			description: 'Pembelian Sound System',
-			category: 'Proyek',
-			amount: 5000000,
-			notes: 'Upgrade speaker masjid'
-		}
-	];
+const TRANSACTION_TYPE = 'expense';
 
-	const categories = ['Operasional', 'Proyek', 'Gaji', 'Lainnya'];
-	const totalExpense = transactions.reduce((sum, tx) => sum + tx.amount, 0);
-	const largestExpense = Math.max(...transactions.map((tx) => tx.amount));
+export const load = async () => {
+	const transactions = await db
+		.select()
+		.from(table.financialTransaction)
+		.where(eq(table.financialTransaction.type, TRANSACTION_TYPE))
+		.orderBy(desc(table.financialTransaction.date));
+
+	// Stats calculation
+	const totalExpense = transactions.reduce((sum, t) => sum + Number(t.amount), 0);
+	const transactionCount = transactions.length;
+	// Find largest single expense
+	const largestExpense = transactions.reduce((max, t) => Math.max(max, Number(t.amount)), 0);
+
+	// Get unique categories for filter
+	const categories = [...new Set(transactions.map((t) => t.category))].sort();
+
+	const form = await superValidate(valibot(transactionSchema));
 
 	return {
+		form,
 		transactions,
-		categories,
 		totalExpense,
+		transactionCount,
 		largestExpense,
-		transactionCount: transactions.length
+		categories
 	};
 };
 
-export const actions: Actions = {
-	create: async ({ request }) => {
+export const actions = {
+	create: async ({ request, locals }) => {
 		const formData = await request.formData();
-		const date = formData.get('date') as string;
-		const category = formData.get('category') as string;
-		const amountRaw = formData.get('amountRaw') as string;
-		const description = formData.get('description') as string;
-		const notes = formData.get('notes') as string;
+		const form = await superValidate(formData, valibot(transactionSchema));
 
-		if (!date || !category || !amountRaw || !description) {
-			return fail(400, { error: 'Semua field wajib harus diisi' });
+		if (!form.valid) {
+			return fail(400, { form });
 		}
 
-		const amount = Number(amountRaw);
-		if (isNaN(amount) || amount <= 0) {
-			return fail(400, { error: 'Jumlah harus lebih dari 0' });
+		let proofUrl: string | undefined;
+		const proofFile = formData.get('proof') as File;
+
+		if (proofFile && proofFile.size > 0) {
+			try {
+				const buffer = Buffer.from(await proofFile.arrayBuffer());
+				const uploadResult = await uploadImageFromBuffer(buffer, 'tadbeer/finance/expense');
+				proofUrl = uploadResult.secure_url;
+			} catch (error) {
+				console.error('Image upload failed:', error);
+				return fail(500, { form, message: 'Gagal mengupload bukti transaksi' });
+			}
 		}
 
-		console.log('Creating expense:', { date, category, amount, description, notes });
-		return { success: true, message: 'Pengeluaran berhasil ditambahkan' };
+		try {
+			await db.insert(table.financialTransaction).values({
+				type: TRANSACTION_TYPE,
+				category: form.data.category as any,
+				amount: form.data.amountRaw.toString(),
+				description: form.data.description,
+				notes: form.data.notes,
+				date: form.data.date,
+				proofUrl: proofUrl
+				// recordedBy: locals.user?.id
+			});
+		} catch (error) {
+			console.error('Database insert failed:', error);
+			return fail(500, { form, message: 'Gagal menyimpan data ke database' });
+		}
+
+		return { form, message: 'Data pengeluaran berhasil ditambahkan' };
 	},
 
 	update: async ({ request }) => {
 		const formData = await request.formData();
-		const id = formData.get('id') as string;
-		const date = formData.get('date') as string;
-		const category = formData.get('category') as string;
-		const amountRaw = formData.get('amountRaw') as string;
-		const description = formData.get('description') as string;
-		const notes = formData.get('notes') as string;
+		const form = await superValidate(formData, valibot(transactionSchema));
 
-		if (!id || !date || !category || !amountRaw || !description) {
-			return fail(400, { error: 'Semua field wajib harus diisi' });
+		if (!form.valid) {
+			return fail(400, { form });
 		}
 
-		const amount = Number(amountRaw);
-		if (isNaN(amount) || amount <= 0) {
-			return fail(400, { error: 'Jumlah harus lebih dari 0' });
+		if (!form.data.id) {
+			return fail(400, { form, message: 'ID transaksi tidak ditemukan' });
 		}
 
-		console.log('Updating expense:', { id, date, category, amount, description, notes });
-		return { success: true, message: 'Pengeluaran berhasil diperbarui' };
+		let proofUrl: string | undefined;
+		const proofFile = formData.get('proof') as File;
+
+		try {
+			const [existingTx] = await db
+				.select()
+				.from(table.financialTransaction)
+				.where(eq(table.financialTransaction.id, form.data.id))
+				.limit(1);
+
+			if (!existingTx) {
+				return fail(404, { form, message: 'Transaksi tidak ditemukan' });
+			}
+
+			proofUrl = existingTx.proofUrl || undefined;
+
+			if (proofFile && proofFile.size > 0) {
+				const buffer = Buffer.from(await proofFile.arrayBuffer());
+				const uploadResult = await uploadImageFromBuffer(buffer, 'tadbeer/finance/expense');
+				proofUrl = uploadResult.secure_url;
+
+				if (existingTx.proofUrl) {
+					const publicId = getPublicIdFromUrl(existingTx.proofUrl);
+					if (publicId) await deleteImage(publicId);
+				}
+			}
+
+			await db
+				.update(table.financialTransaction)
+				.set({
+					category: form.data.category as any,
+					amount: form.data.amountRaw.toString(),
+					description: form.data.description,
+					notes: form.data.notes,
+					date: form.data.date,
+					proofUrl: proofUrl,
+					updatedAt: new Date()
+				})
+				.where(eq(table.financialTransaction.id, form.data.id));
+		} catch (error) {
+			console.error('Update failed:', error);
+			return fail(500, { form, message: 'Gagal memperbarui data' });
+		}
+
+		return { form, message: 'Data pengeluaran berhasil diperbarui' };
 	},
 
 	delete: async ({ request }) => {
 		const formData = await request.formData();
-		const id = formData.get('id') as string;
-		if (!id) return fail(400, { error: 'ID tidak ditemukan' });
+		const id = Number(formData.get('id'));
 
-		console.log('Deleting expense:', id);
-		return { success: true, message: 'Transaksi berhasil dihapus' };
+		if (!id) {
+			return fail(400, { message: 'ID tidak valid' });
+		}
+
+		try {
+			const [existingTx] = await db
+				.select()
+				.from(table.financialTransaction)
+				.where(eq(table.financialTransaction.id, id))
+				.limit(1);
+
+			if (!existingTx) {
+				return fail(404, { message: 'Transaksi tidak ditemukan' });
+			}
+
+			if (existingTx.proofUrl) {
+				const publicId = getPublicIdFromUrl(existingTx.proofUrl);
+				if (publicId) await deleteImage(publicId);
+			}
+
+			await db.delete(table.financialTransaction).where(eq(table.financialTransaction.id, id));
+		} catch (error) {
+			console.error('Delete failed:', error);
+			return fail(500, { message: 'Gagal menghapus data' });
+		}
+
+		return { success: true, message: 'Data berhasil dihapus' };
 	}
 };

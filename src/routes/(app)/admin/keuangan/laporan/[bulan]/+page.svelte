@@ -49,17 +49,66 @@
 			.reduce((a: number, b: any) => a + b.amount, 0) || 0
 	);
 	const netBalance = $derived(totalIncome - totalExpense);
+
+	// Export
+	function exportToCSV() {
+		const header = ['Tanggal', 'Keterangan', 'Kategori', 'Tipe', 'Jumlah'];
+		const rows = (page.data.transactions || []).map((tx: any) => [
+			tx.date,
+			`"${tx.description}"`,
+			tx.category,
+			tx.type,
+			tx.amount
+		]);
+
+		const csvContent = [
+			`LAPORAN KEUANGAN ${page.data.monthName} ${page.data.year}`,
+			header.join(','),
+			...rows.map((r: any[]) => r.join(','))
+		].join('\n');
+
+		const blob = new Blob([csvContent], { type: 'text/csv' });
+		const url = window.URL.createObjectURL(blob);
+		const a = document.createElement('a');
+		a.href = url;
+		a.download = `laporan_keuangan_${page.data.year}_${String(page.data.month).padStart(2, '0')}.csv`;
+		a.click();
+		window.URL.revokeObjectURL(url);
+	}
+
+	function printReport() {
+		window.print();
+	}
 </script>
 
 <svelte:head>
 	<title>Laporan {page.data.monthName} {page.data.year} | Keuangan | TadBeer</title>
+	<style>
+		@media print {
+			.navbar,
+			.drawer-side,
+			.btn,
+			.no-print {
+				display: none !important;
+			}
+			.card {
+				box-shadow: none !important;
+				break-inside: avoid;
+				border: 1px solid #ddd;
+			}
+			* {
+				-webkit-print-color-adjust: exact !important;
+				print-color-adjust: exact !important;
+			}
+		}
+	</style>
 </svelte:head>
 
 <div class="space-y-6">
 	<!-- Header -->
 	<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
 		<div class="flex items-center gap-4">
-			<a href="/admin/keuangan/laporan" class="btn btn-ghost btn-sm btn-square">
+			<a href="/admin/keuangan/laporan" class="btn btn-ghost btn-sm btn-square no-print">
 				<ArrowLeft class="w-5 h-5" />
 			</a>
 			<div>
@@ -67,14 +116,14 @@
 				<p class="text-base-content/60">Detail transaksi bulanan</p>
 			</div>
 		</div>
-		<div class="dropdown dropdown-end">
+		<div class="dropdown dropdown-end no-print">
 			<button class="btn btn-primary btn-sm">
 				<Download class="w-4 h-4" />
 				Export
 			</button>
 			<ul class="dropdown-content menu bg-base-100 rounded-box shadow-lg z-10 w-48 p-2">
-				<li><button>📊 Excel (.xlsx)</button></li>
-				<li><button>📄 PDF Laporan</button></li>
+				<li><button onclick={exportToCSV}>📊 Excel (.csv)</button></li>
+				<li><button onclick={printReport}>🖨️ Print / PDF</button></li>
 			</ul>
 		</div>
 	</div>

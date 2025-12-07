@@ -107,4 +107,18 @@ export const securitySchema = v.object({
 	confirmPassword: v.pipe(v.string(), v.minLength(1, 'Please confirm your password'))
 });
 
-export type SecuritySchema = typeof securitySchema;
+export const transactionSchema = v.object({
+	id: v.optional(v.number()),
+	date: v.pipe(v.string(), v.minLength(1, 'Date is required')),
+	category: v.pipe(v.string(), v.minLength(1, 'Category is required')),
+	amountRaw: v.pipe(
+		v.number('Amount must be a number'),
+		v.minValue(1, 'Amount must be greater than 0')
+	),
+
+	description: v.pipe(v.string(), v.minLength(3, 'Description must be at least 3 characters')),
+	notes: v.optional(v.string()),
+	proof: v.optional(v.any()) // File object processing is handled separately
+});
+
+export type TransactionSchema = typeof transactionSchema;

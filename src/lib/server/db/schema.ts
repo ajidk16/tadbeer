@@ -161,6 +161,7 @@ export const financialTransaction = pgTable('financial_transaction', {
 	description: text('description').notNull(),
 	date: date('date').defaultNow().notNull(),
 	proofUrl: text('proof_url'),
+	notes: text('notes'),
 	recordedBy: text('recorded_by').references(() => user.id),
 	createdAt: timestamp('created_at').defaultNow().notNull(),
 	updatedAt: timestamp('updated_at').defaultNow().notNull(),

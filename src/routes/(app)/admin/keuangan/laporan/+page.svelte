@@ -3,7 +3,6 @@
 	import { Chart } from '$lib/components/ui';
 	import { Download, FileText, Calendar } from 'lucide-svelte';
 
-
 	// Selected period
 	let selectedYear = $state(new Date().getFullYear());
 	let selectedMonth = $state<number | null>(null);
@@ -67,10 +66,82 @@
 		if (value >= 1000000) return `Rp ${(value / 1000000).toFixed(1)}jt`;
 		return formatCurrency(value);
 	}
+	import { goto } from '$app/navigation';
+
+	// Year Selection
+	function handleYearChange(event: Event) {
+		const target = event.target as HTMLSelectElement;
+		const url = new URL(page.url);
+		url.searchParams.set('year', target.value);
+		goto(url);
+	}
+
+	// Export
+	function exportToCSV() {
+		const header = ['Bulan', 'Pemasukan', 'Pengeluaran', 'Selisih'];
+		const months = [
+			'Jan',
+			'Feb',
+			'Mar',
+			'Apr',
+			'Mei',
+			'Jun',
+			'Jul',
+			'Agu',
+			'Sep',
+			'Okt',
+			'Nov',
+			'Des'
+		];
+
+		const rows = months.map((m, i) => {
+			const inc = page.data.monthlyIncome?.[i] || 0;
+			const exp = page.data.monthlyExpense?.[i] || 0;
+			return [m, inc, exp, inc - exp];
+		});
+
+		const csvContent = [
+			`LAPORAN KEUANGAN TAHUN ${page.data.selectedYear}`,
+			header.join(','),
+			...rows.map((r) => r.join(','))
+		].join('\n');
+
+		const blob = new Blob([csvContent], { type: 'text/csv' });
+		const url = window.URL.createObjectURL(blob);
+		const a = document.createElement('a');
+		a.href = url;
+		a.download = `laporan_keuangan_${page.data.selectedYear}.csv`;
+		a.click();
+		window.URL.revokeObjectURL(url);
+	}
+
+	function printReport() {
+		window.print();
+	}
 </script>
 
 <svelte:head>
-	<title>Laporan Keuangan | TadBeer</title>
+	<title>Laporan Keuangan {page.data.selectedYear} | TadBeer</title>
+	<style>
+		@media print {
+			.navbar,
+			.drawer-side,
+			.btn,
+			select,
+			.no-print {
+				display: none !important;
+			}
+			.card {
+				box-shadow: none !important;
+				break-inside: avoid;
+				border: 1px solid #ddd;
+			}
+			* {
+				-webkit-print-color-adjust: exact !important;
+				print-color-adjust: exact !important;
+			}
+		}
+	</style>
 </svelte:head>
 
 <div class="space-y-6">
@@ -80,8 +151,12 @@
 			<h1 class="text-2xl font-bold">📄 Laporan Keuangan</h1>
 			<p class="text-base-content/60 mt-1">Laporan bulanan dan tahunan</p>
 		</div>
-		<div class="flex gap-2">
-			<select class="select select-bordered select-sm" bind:value={selectedYear}>
+		<div class="flex gap-2 no-print">
+			<select
+				class="select select-bordered select-sm"
+				value={page.data.selectedYear}
+				onchange={handleYearChange}
+			>
 				{#each [2025, 2024, 2023] as year}
 					<option value={year}>{year}</option>
 				{/each}
@@ -92,9 +167,8 @@
 					Export
 				</button>
 				<ul class="dropdown-content menu bg-base-100 rounded-box shadow-lg z-10 w-48 p-2">
-					<li><button>📊 Excel (.xlsx)</button></li>
-					<li><button>📄 PDF Laporan</button></li>
-					<li><button>🖨️ Print</button></li>
+					<li><button onclick={exportToCSV}>📊 Excel (.csv)</button></li>
+					<li><button onclick={printReport}>🖨️ Print / PDF</button></li>
 				</ul>
 			</div>
 		</div>
@@ -218,7 +292,12 @@
 					type="pie"
 					series={page.data.expenseByCategory?.values || [40, 30, 20, 10]}
 					options={{
-						labels: page.data.expenseByCategory?.labels || ['Operasional', 'Proyek', 'Gaji', 'Lainnya'],
+						labels: page.data.expenseByCategory?.labels || [
+							'Operasional',
+							'Proyek',
+							'Gaji',
+							'Lainnya'
+						],
 						colors: ['#ef4444', '#f97316', '#eab308', '#6b7280']
 					}}
 					height={250}

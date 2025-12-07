@@ -1,34 +1,54 @@
 import type { PageServerLoad } from './$types';
+import { db } from '$lib/server/db';
+import { financialTransaction } from '$lib/server/db/schema';
+import { sql, and, gte, lte } from 'drizzle-orm';
 
 export const load: PageServerLoad = async ({ url }) => {
-	const year = Number(url.searchParams.get('year')) || new Date().getFullYear();
+	const currentYear = new Date().getFullYear();
+	const selectedYear = Number(url.searchParams.get('year')) || currentYear;
 
-	// Mock data - replace with actual database queries
-	const monthlyIncome = [
-		12000000, 15000000, 11000000, 18000000, 14000000, 16000000, 12500000, 17000000, 13000000,
-		15500000, 14000000, 16500000
-	];
+	const startDate = `${selectedYear}-01-01`;
+	const endDate = `${selectedYear}-12-31`;
 
-	const monthlyExpense = [
-		8000000, 9000000, 7000000, 10000000, 8500000, 9000000, 7500000, 9500000, 8000000, 9200000,
-		8800000, 9700000
-	];
+	// Fetch all transactions for the year
+	const transactions = await db
+		.select()
+		.from(financialTransaction)
+		.where(and(gte(financialTransaction.date, startDate), lte(financialTransaction.date, endDate)));
 
-	const incomeByCategory = {
-		labels: ['Infaq', 'Zakat', 'Sadaqah', 'Wakaf'],
-		values: [45, 25, 18, 12]
-	};
+	// Aggregate Monthly Data
+	// Initialize array with 12 zeros
+	const monthlyIncome = Array(12).fill(0);
+	const monthlyExpense = Array(12).fill(0);
 
-	const expenseByCategory = {
-		labels: ['Operasional', 'Proyek', 'Gaji', 'Lainnya'],
-		values: [40, 30, 20, 10]
-	};
+	// Aggregate Category Data
+	const incomeByCategoryMap = new Map<string, number>();
+	const expenseByCategoryMap = new Map<string, number>();
+
+	transactions.forEach((tx) => {
+		const monthIndex = new Date(tx.date).getMonth(); // 0-11
+		const amount = Number(tx.amount);
+
+		if (tx.type === 'income') {
+			monthlyIncome[monthIndex] += amount;
+			incomeByCategoryMap.set(tx.category, (incomeByCategoryMap.get(tx.category) || 0) + amount);
+		} else {
+			monthlyExpense[monthIndex] += amount;
+			expenseByCategoryMap.set(tx.category, (expenseByCategoryMap.get(tx.category) || 0) + amount);
+		}
+	});
 
 	return {
-		year,
+		selectedYear,
 		monthlyIncome,
 		monthlyExpense,
-		incomeByCategory,
-		expenseByCategory
+		incomeByCategory: {
+			labels: Array.from(incomeByCategoryMap.keys()),
+			values: Array.from(incomeByCategoryMap.values())
+		},
+		expenseByCategory: {
+			labels: Array.from(expenseByCategoryMap.keys()),
+			values: Array.from(expenseByCategoryMap.values())
+		}
 	};
 };

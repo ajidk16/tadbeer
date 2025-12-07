@@ -1,124 +1,95 @@
 import type { PageServerLoad } from './$types';
-
-const monthNames = [
-	'Januari',
-	'Februari',
-	'Maret',
-	'April',
-	'Mei',
-	'Juni',
-	'Juli',
-	'Agustus',
-	'September',
-	'Oktober',
-	'November',
-	'Desember'
-];
+import { db } from '$lib/server/db';
+import { financialTransaction } from '$lib/server/db/schema';
+import { sql, and, gte, lte, desc } from 'drizzle-orm';
 
 export const load: PageServerLoad = async ({ params }) => {
-	const [year, month] = params.bulan.split('-').map(Number);
-	const monthName = monthNames[month - 1] || 'Unknown';
+	const { bulan } = params; // Format: YYYY-MM
+	const [yearStr, monthStr] = bulan.split('-');
+	const year = Number(yearStr);
+	const month = Number(monthStr);
 
-	// Mock data - replace with database queries
-	const daysInMonth = new Date(year, month, 0).getDate();
-	const dailyLabels = Array.from({ length: daysInMonth }, (_, i) => `${i + 1}`);
-	const dailyIncome = Array.from({ length: daysInMonth }, () => Math.random() * 500000);
-	const dailyExpense = Array.from({ length: daysInMonth }, () => Math.random() * 300000);
+	const startDate = `${bulan}-01`;
+	// Calculate end date (last day of month)
+	const nextMonth = month === 12 ? 1 : month + 1;
+	const nextYear = month === 12 ? year + 1 : year;
+	const endDateDate = new Date(nextYear, nextMonth - 1, 0); // Day 0 is last day of prev month
+	const endDate = endDateDate.toISOString().split('T')[0];
 
-	const transactions = [
-		{
-			date: `${year}-${String(month).padStart(2, '0')}-01`,
-			description: 'Infaq Jumat Minggu I',
-			category: 'Infaq',
-			type: 'income',
-			amount: 2500000
-		},
-		{
-			date: `${year}-${String(month).padStart(2, '0')}-02`,
-			description: 'Pembayaran Listrik',
-			category: 'Operasional',
-			type: 'expense',
-			amount: 850000
-		},
-		{
-			date: `${year}-${String(month).padStart(2, '0')}-05`,
-			description: 'Zakat Fitrah',
-			category: 'Zakat',
-			type: 'income',
-			amount: 500000
-		},
-		{
-			date: `${year}-${String(month).padStart(2, '0')}-08`,
-			description: 'Infaq Jumat Minggu II',
-			category: 'Infaq',
-			type: 'income',
-			amount: 2800000
-		},
-		{
-			date: `${year}-${String(month).padStart(2, '0')}-10`,
-			description: 'Gaji Marbot',
-			category: 'Gaji',
-			type: 'expense',
-			amount: 2000000
-		},
-		{
-			date: `${year}-${String(month).padStart(2, '0')}-12`,
-			description: 'Sadaqah Hamba Allah',
-			category: 'Sadaqah',
-			type: 'income',
-			amount: 1000000
-		},
-		{
-			date: `${year}-${String(month).padStart(2, '0')}-15`,
-			description: 'Infaq Jumat Minggu III',
-			category: 'Infaq',
-			type: 'income',
-			amount: 2600000
-		},
-		{
-			date: `${year}-${String(month).padStart(2, '0')}-18`,
-			description: 'Pembayaran Air PDAM',
-			category: 'Operasional',
-			type: 'expense',
-			amount: 350000
-		},
-		{
-			date: `${year}-${String(month).padStart(2, '0')}-22`,
-			description: 'Infaq Jumat Minggu IV',
-			category: 'Infaq',
-			type: 'income',
-			amount: 2700000
-		},
-		{
-			date: `${year}-${String(month).padStart(2, '0')}-25`,
-			description: 'Pembelian Sajadah',
-			category: 'Proyek',
-			type: 'expense',
-			amount: 1500000
+	// Fetch transactions for the month
+	const transactions = await db
+		.select()
+		.from(financialTransaction)
+		.where(and(gte(financialTransaction.date, startDate), lte(financialTransaction.date, endDate)))
+		.orderBy(desc(financialTransaction.date));
+
+	// Daily Trends Calculation
+	const dailyIncomeMap = new Map<number, number>();
+	const dailyExpenseMap = new Map<number, number>();
+	const daysInMonth = endDateDate.getDate();
+
+	// Initialize maps
+	for (let i = 1; i <= daysInMonth; i++) {
+		dailyIncomeMap.set(i, 0);
+		dailyExpenseMap.set(i, 0);
+	}
+
+	// Category Calculation
+	const incomeCategoryMap = new Map<string, number>();
+	const expenseCategoryMap = new Map<string, number>();
+	let totalIncome = 0;
+	let totalExpense = 0;
+
+	transactions.forEach((tx) => {
+		const day = new Date(tx.date).getDate();
+		const amount = Number(tx.amount);
+
+		if (tx.type === 'income') {
+			dailyIncomeMap.set(day, (dailyIncomeMap.get(day) || 0) + amount);
+			incomeCategoryMap.set(tx.category, (incomeCategoryMap.get(tx.category) || 0) + amount);
+			totalIncome += amount;
+		} else {
+			dailyExpenseMap.set(day, (dailyExpenseMap.get(day) || 0) + amount);
+			expenseCategoryMap.set(tx.category, (expenseCategoryMap.get(tx.category) || 0) + amount);
+			totalExpense += amount;
 		}
-	];
+	});
 
-	const incomeCategories = [
-		{ name: 'Infaq', amount: 10600000, percentage: 75 },
-		{ name: 'Zakat', amount: 500000, percentage: 4 },
-		{ name: 'Sadaqah', amount: 1000000, percentage: 7 },
-		{ name: 'Wakaf', amount: 2000000, percentage: 14 }
-	];
+	// Prepare Chart Data
+	const dailyLabels = Array.from({ length: daysInMonth }, (_, i) => String(i + 1));
+	const dailyIncome = Array.from({ length: daysInMonth }, (_, i) => dailyIncomeMap.get(i + 1) || 0);
+	const dailyExpense = Array.from(
+		{ length: daysInMonth },
+		(_, i) => dailyExpenseMap.get(i + 1) || 0
+	);
 
-	const expenseCategories = [
-		{ name: 'Operasional', amount: 1200000, percentage: 26 },
-		{ name: 'Gaji', amount: 2000000, percentage: 43 },
-		{ name: 'Proyek', amount: 1500000, percentage: 31 }
-	];
+	// Prepare Category Data
+	const incomeCategories = Array.from(incomeCategoryMap.entries())
+		.map(([name, amount]) => ({
+			name,
+			amount,
+			percentage: totalIncome > 0 ? (amount / totalIncome) * 100 : 0
+		}))
+		.sort((a, b) => b.amount - a.amount);
+
+	const expenseCategories = Array.from(expenseCategoryMap.entries())
+		.map(([name, amount]) => ({
+			name,
+			amount,
+			percentage: totalExpense > 0 ? (amount / totalExpense) * 100 : 0
+		}))
+		.sort((a, b) => b.amount - a.amount);
+
+	const monthName = new Date(year, month - 1, 1).toLocaleString('id-ID', { month: 'long' });
 
 	return {
 		year,
 		month,
 		monthName,
+		transactions,
 		dailyLabels,
 		dailyIncome,
 		dailyExpense,
-		transactions,
 		incomeCategories,
 		expenseCategories
 	};
