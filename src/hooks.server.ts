@@ -87,27 +87,35 @@ async function getProtectedRoutes() {
 	return cachedRoutes;
 }
 
-const handleRole: Handle = async ({ event, resolve }) => {
+const cekRole: Handle = async ({ event, resolve }) => {
 	const path = event.url.pathname;
+	const route = event.route.id;
 
-	// Fetch dynamic routes
+	// 1. Admin Specific Rules
+	if (route && route.startsWith('/(app)')) {
+		if (!event.locals.user) {
+			return Response.redirect(new URL('/', event.url), 303);
+		}
+		if (!event.locals.user.emailVerified) {
+			return Response.redirect(new URL('/verify-email', event.url), 303);
+		}
+	}
+
+	// 2. Dynamic Protected Routes (RBAC)
 	const protectedRoutes = await getProtectedRoutes();
 
-	// Find matching route (longest prefix match is usually better, but for now linear find is okay if ordered correctly)
-	// We should sort by prefix length descending to ensure specific routes match before general ones
+	// Find matching route (longest prefix match)
 	const sortedRoutes = [...protectedRoutes].sort((a, b) => b.prefix.length - a.prefix.length);
-
 	const protectedRoute = sortedRoutes.find((route) => path.startsWith(route.prefix));
 
 	if (protectedRoute) {
-		// 1. Check if user is authenticated
+		// Check authentication
 		if (!event.locals.user) {
-			return Response.redirect(new URL(`/auth/login?redirectTo=${path}`, event.url), 303);
+			return Response.redirect(new URL('/', event.url), 303);
 		}
 
-		// 2. Check if user has required role
+		// Check role
 		if (!protectedRoute.roles.includes(event.locals.user.role)) {
-			// Optional: Render a nice 403 page instead of plain text
 			return new Response('Forbidden: You do not have permission to access this resource.', {
 				status: 403
 			});
@@ -117,4 +125,4 @@ const handleRole: Handle = async ({ event, resolve }) => {
 	return resolve(event);
 };
 
-export const handle: Handle = sequence(handleParaglide, handleRateLimit, handleSession, handleRole);
+export const handle: Handle = sequence(handleParaglide, handleRateLimit, handleSession, cekRole);

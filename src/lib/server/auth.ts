@@ -37,6 +37,7 @@ export async function validateSessionToken(token: string) {
 				role: sql<string>`COALESCE(${table.roles.name}, ${table.user.role}::text)`,
 				avatarUrl: table.user.avatarUrl,
 				fullName: table.user.fullName,
+				emailVerified: table.user.emailVerified
 			},
 			session: table.session
 		})
