@@ -1,6 +1,7 @@
 <script lang="ts">
-	import { enhance } from '$app/forms';
 	import { Badge, Toast, success as toastSuccess, error as toastError } from '$lib/components/ui';
+	import { enhance as svelteEnhance } from '$app/forms';
+	import { superForm } from 'sveltekit-superforms';
 	import {
 		Plus,
 		Heart,
@@ -15,10 +16,34 @@
 		Wallet,
 		QrCode,
 		Clock,
-		SquarePen
+		SquarePen,
+		X
 	} from 'lucide-svelte';
+	import { page } from '$app/state';
 
-	let { data } = $props();
+	const { form, errors, enhance, constraints, message, delayed } = superForm(page.data.form, {
+		delayMs: 0, // Show loading indicator immediately
+		timeoutMs: 8000, // 8s timeout
+		onResult: ({ result }) => {
+			if (showCampaignModal) {
+				// Close modal on success
+				if (result.type === 'success') {
+					toastSuccess(isEditMode ? 'Program diperbarui' : 'Program donasi berhasil dibuat');
+					showCampaignModal = false;
+				} else if (result.type === 'failure') {
+					// Server returns { form, message: '...' } on failure
+					toastError(result.data?.message || 'Gagal menyimpan');
+				}
+			} else {
+				if (result.type === 'success') {
+					toastSuccess('Data berhasil dihapus');
+					showDeleteModal = false;
+				} else {
+					toastError('Gagal menghapus');
+				}
+			}
+		}
+	});
 
 	// View state
 	let activeTab = $state('campaigns'); // campaigns, transactions
@@ -28,13 +53,6 @@
 	let showDeleteModal = $state(false);
 	let selectedItem = $state<any>(null);
 	let isEditMode = $state(false);
-	let isSubmitting = $state(false);
-
-	// Form states
-	let formTitle = $state('');
-	let formTarget = $state('');
-	let formDeadline = $state('');
-	let formDescription = $state('');
 
 	function formatCurrency(amount: number) {
 		return new Intl.NumberFormat('id-ID', {
@@ -45,6 +63,7 @@
 	}
 
 	function formatDate(dateStr: string) {
+		if (!dateStr) return '-';
 		return new Date(dateStr).toLocaleDateString('id-ID', {
 			day: 'numeric',
 			month: 'long',
@@ -53,51 +72,65 @@
 	}
 
 	function getProgress(collected: number, target: number) {
+		if (!target) return 0;
 		return Math.min(Math.round((collected / target) * 100), 100);
+	}
+
+	let formTargetFormatted = $state('');
+
+	function formatTargetInput(e: Event) {
+		const input = e.target as HTMLInputElement;
+		const value = input.value.replace(/\D/g, '');
+		$form.target = Number(value); // Update form store directly
+		formTargetFormatted = value ? new Intl.NumberFormat('id-ID').format(Number(value)) : '';
+		input.value = formTargetFormatted;
 	}
 
 	function copyLink(id: string) {
 		const url = `${window.location.origin}/donasi/${id}`;
-		navigator.clipboard.writeText(url);
-		toastSuccess('Link donasi berhasil disalin');
+		// Fallback for clipboard API in some envs, but standard is fine
+		navigator.clipboard
+			.writeText(url)
+			.then(() => {
+				toastSuccess('Link donasi berhasil disalin');
+			})
+			.catch(() => {
+				toastError('Gagal menyalin link');
+			});
 	}
 
 	function openCampaignModal() {
 		selectedItem = null;
 		isEditMode = false;
-		formTitle = '';
-		formTarget = '';
-		formDeadline = '';
-		formDescription = '';
+		// Reset form
+		$form.id = undefined;
+		$form.title = 'bantuan korban banjir sumatra';
+		// $form.target = 0;
+		formTargetFormatted = new Intl.NumberFormat('id-ID').format(10000000000);
+		$form.deadline = '';
+		$form.description = '';
 		showCampaignModal = true;
 	}
 
 	function openEditCampaign(item: any) {
 		selectedItem = item;
 		isEditMode = true;
-		formTitle = item.title;
-		formTarget = item.target.toString();
-		formDeadline = item.deadline;
-		formDescription = item.description || '';
+
+		$form.id = item.id;
+		$form.title = item.title;
+		// $form.target = item.target;
+		formTargetFormatted = new Intl.NumberFormat('id-ID').format(item.target);
+		$form.deadline = item.deadline; // Already YYYY-MM-DD from server transform
+		$form.description = item.description || '';
+
 		showCampaignModal = true;
 	}
 
 	function openDelete(item: any) {
 		selectedItem = item;
-		showDeleteModal = true;
-	}
+		$form.id = item.id;
 
-	function handleSubmit() {
-		return async ({ result, update }: any) => {
-			isSubmitting = false;
-			if (result.type === 'success') {
-				toastSuccess('Program donasi berhasil dibuat');
-				showCampaignModal = false;
-				await update();
-			} else {
-				toastError('Gagal menyimpan');
-			}
-		};
+		showDeleteModal = true;
 	}
 
 	function handleDelete() {
@@ -117,7 +150,7 @@
 	<title>Donasi | TadBeer</title>
 </svelte:head>
 
-<Toast />
+<!-- <Toast /> -->
 
 <div class="space-y-6">
 	<!-- Header -->
@@ -136,19 +169,21 @@
 		<div class="stat">
 			<div class="stat-figure text-primary"><DollarSign class="w-8 h-8" /></div>
 			<div class="stat-title">Total Terkumpul</div>
-			<div class="stat-value text-xl text-primary">{formatCurrency(data.stats.totalCollected)}</div>
+			<div class="stat-value text-xl text-primary">
+				{formatCurrency(page.data.stats.totalCollected)}
+			</div>
 			<div class="stat-desc">Semua program</div>
 		</div>
 		<div class="stat">
 			<div class="stat-figure text-secondary"><Heart class="w-8 h-8" /></div>
 			<div class="stat-title">Program Aktif</div>
-			<div class="stat-value text-xl">{data.stats.activeCampaigns}</div>
+			<div class="stat-value text-xl">{page.data.stats.activeCampaigns}</div>
 			<div class="stat-desc">Sedang berjalan</div>
 		</div>
 		<div class="stat">
 			<div class="stat-figure text-accent"><Users class="w-8 h-8" /></div>
 			<div class="stat-title">Total Donatur</div>
-			<div class="stat-value text-xl">{data.stats.totalDonors}</div>
+			<div class="stat-value text-xl">{page.data.stats.totalDonors}</div>
 			<div class="stat-desc">Orang berdonasi</div>
 		</div>
 	</div>
@@ -173,7 +208,7 @@
 
 	{#if activeTab === 'campaigns'}
 		<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-			{#each data.campaigns as campaign}
+			{#each page.data.campaigns as campaign}
 				<div class="card bg-base-100 shadow-sm hover:shadow-md transition-shadow">
 					<div class="card-body p-4">
 						<div class="flex justify-between items-start mb-2">
@@ -184,7 +219,7 @@
 								<button class="btn btn-ghost btn-xs btn-square">⋮</button>
 								<ul class="dropdown-content menu bg-base-100 rounded-box shadow z-10 w-40 p-1">
 									<li>
-										<button onclick={() => copyLink(campaign.id)}
+										<button onclick={() => copyLink(campaign.id.toString())}
 											><Copy class="w-4 h-4" /> Salin Link</button
 										>
 									</li>
@@ -231,12 +266,17 @@
 						<div class="card-actions justify-end mt-4 pt-4 border-t border-base-200">
 							<button
 								class="btn btn-sm btn-outline btn-primary w-full"
-								onclick={() => copyLink(campaign.id)}
+								onclick={() => copyLink(campaign.id.toString())}
 							>
 								<Share2 class="w-4 h-4" /> Bagikan
 							</button>
 						</div>
 					</div>
+				</div>
+			{:else}
+				<div class="col-span-3 text-center py-12 text-base-content/50">
+					<p class="text-4xl mb-2">💝</p>
+					<p>Belum ada program donasi</p>
 				</div>
 			{/each}
 		</div>
@@ -255,7 +295,7 @@
 							</tr>
 						</thead>
 						<tbody>
-							{#each data.transactions as trx}
+							{#each page.data.transactions as trx}
 								<tr class="hover:bg-base-200/50">
 									<td>
 										<div class="font-medium">{trx.donorName}</div>
@@ -281,6 +321,12 @@
 										</Badge>
 									</td>
 								</tr>
+							{:else}
+								<tr>
+									<td colspan="5" class="text-center py-12 text-base-content/50">
+										<p>Belum ada transaksi</p>
+									</td>
+								</tr>
 							{/each}
 						</tbody>
 					</table>
@@ -294,39 +340,49 @@
 {#if showCampaignModal}
 	<dialog class="modal modal-open">
 		<div class="modal-box">
+			<button
+				class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2"
+				onclick={() => {
+					showCampaignModal = false;
+				}}
+			>
+				<X class="w-4 h-4" />
+			</button>
 			<h3 class="font-bold text-lg mb-4">
 				{isEditMode ? '✏️ Edit Program Donasi' : '💝 Buat Program Donasi'}
 			</h3>
-			<form
-				method="POST"
-				action={isEditMode ? '?/updateCampaign' : '?/createCampaign'}
-				use:enhance={handleSubmit}
-			>
+			<form method="POST" action={isEditMode ? '?/updateCampaign' : '?/createCampaign'} use:enhance>
 				{#if isEditMode}
-					<input type="hidden" name="id" value={selectedItem?.id} />
+					<input type="hidden" name="id" value={$form.id} />
 				{/if}
 				<div class="space-y-4">
 					<div class="form-control">
-						<label for="" class="label"><span class="label-text">Nama Program</span></label>
+						<label for="title" class="label"><span class="label-text">Nama Program</span></label>
 						<input
 							type="text"
 							name="title"
 							class="input input-bordered w-full"
-							bind:value={formTitle}
-							required
+							bind:value={$form.title}
+							{...$constraints.title}
 							placeholder="Contoh: Renovasi Kubah"
 						/>
+						{#if $errors.title}<span class="text-error text-xs mt-1">{$errors.title}</span>{/if}
 					</div>
 					<div class="form-control">
-						<label for="" class="label"><span class="label-text">Target Dana (Rp)</span></label>
-						<input
-							type="number"
-							name="target"
-							class="input input-bordered w-full"
-							bind:value={formTarget}
-							required
-							placeholder="0"
-						/>
+						<label for="target" class="label"
+							><span class="label-text">Target Dana (Rp)</span></label
+						>
+						<label class="input input-bordered w-full flex items-center gap-2">
+							<span class="text-base-content/60">Rp</span>
+							<input
+								class="grow"
+								value={formTargetFormatted}
+								placeholder="0"
+								oninput={formatTargetInput}
+							/>
+						</label>
+						<input type="hidden" name="target" value={$form.target} />
+						{#if $errors.target}<span class="text-error text-xs mt-1">{$errors.target}</span>{/if}
 					</div>
 					<div class="form-control">
 						<label for="deadline" class="label"><span class="label-text">Batas Waktu</span></label>
@@ -334,16 +390,19 @@
 							type="date"
 							name="deadline"
 							class="input input-bordered w-full"
-							bind:value={formDeadline}
-							required
+							bind:value={$form.deadline}
+							{...$constraints.deadline}
 						/>
+						{#if $errors.deadline}<span class="text-error text-xs mt-1">{$errors.deadline}</span
+							>{/if}
 					</div>
 					<div class="form-control">
 						<label for="description" class="label"><span class="label-text">Deskripsi</span></label>
 						<textarea
 							name="description"
 							class="textarea textarea-bordered h-24 w-full"
-							bind:value={formDescription}
+							bind:value={$form.description}
+							{...$constraints.description}
 							placeholder="Jelaskan tujuan donasi..."
 						></textarea>
 					</div>
@@ -352,15 +411,20 @@
 					<button type="button" class="btn btn-ghost" onclick={() => (showCampaignModal = false)}
 						>Batal</button
 					>
-					<button type="submit" class="btn btn-primary" disabled={isSubmitting}>
-						{#if isSubmitting}<span class="loading loading-spinner loading-sm"></span>{:else}<Plus
-								class="w-4 h-4"
-							/>{/if}
+					<button type="submit" class="btn btn-primary" disabled={$delayed}>
+						{#if $delayed}
+							<span class="loading loading-spinner loading-sm"></span>
+						{:else}
+							<Plus class="w-4 h-4" />
+						{/if}
 						{isEditMode ? 'Simpan Perubahan' : 'Buat Program'}
 					</button>
 				</div>
 			</form>
 		</div>
+		<form method="dialog" class="modal-backdrop">
+			<button onclick={() => (showCampaignModal = false)}>close</button>
+		</form>
 	</dialog>
 {/if}
 
@@ -370,13 +434,24 @@
 		<div class="modal-box">
 			<h3 class="font-bold text-lg text-error">⚠️ Hapus Data</h3>
 			<p class="py-4">Apakah Anda yakin ingin menghapus data ini?</p>
+
 			<div class="modal-action">
 				<button class="btn btn-ghost" onclick={() => (showDeleteModal = false)}>Batal</button>
-				<form method="POST" action="?/delete" use:enhance={handleDelete}>
-					<input type="hidden" name="id" value={selectedItem?.id} />
-					<button type="submit" class="btn btn-error"><Trash2 class="w-4 h-4" /> Hapus</button>
+				<form method="POST" action="?/delete" use:enhance>
+					<input type="hidden" name="id" value={$form?.id} />
+					<button type="submit" disabled={$delayed} class="btn btn-error">
+						{#if $delayed}
+							<span class="loading loading-spinner loading-sm"></span>
+						{:else}
+							<Trash2 class="w-4 h-4" />
+						{/if}
+						Hapus
+					</button>
 				</form>
 			</div>
 		</div>
+		<form method="dialog" class="modal-backdrop">
+			<button onclick={() => (showDeleteModal = false)}>close</button>
+		</form>
 	</dialog>
 {/if}

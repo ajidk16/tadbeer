@@ -137,3 +137,38 @@ export const eventSchema = v.object({
 });
 
 export type EventSchema = typeof eventSchema;
+
+export const memberSchema = v.object({
+	id: v.optional(v.number()),
+	name: v.pipe(v.string(), v.minLength(3, 'Nama harus diisi minimal 3 karakter')),
+	nik: v.optional(v.string()),
+	gender: v.pipe(v.string(), v.minLength(1, 'Pilih jenis kelamin')),
+	birthDate: v.optional(v.string()), // Accept string from date input
+	phone: v.optional(v.string()),
+	email: v.optional(v.pipe(v.string(), v.email('Email tidak valid'))),
+	address: v.optional(v.string()),
+	status: v.optional(v.string())
+});
+
+export type MemberSchema = typeof memberSchema;
+
+export const campaignSchema = v.object({
+	id: v.optional(v.number()),
+	title: v.pipe(v.string(), v.minLength(5, 'Nama program minimal 5 karakter')),
+	target: v.pipe(
+		// v.number('Target dana harus berupa angka'),
+		// v.minValue(10000, 'Target dana minimal Rp 10.000')
+		v.number('Amount must be a number'),
+		v.minValue(1, 'Amount must be greater than 0')
+	),
+	deadline: v.pipe(v.string(), v.minLength(1, 'Tentukan batas waktu')),
+	description: v.optional(v.string())
+});
+
+export type CampaignSchema = typeof campaignSchema;
+
+export const deleteCampaignSchema = v.object({
+	id: v.pipe(v.number('ID program harus berupa angka'))
+});
+
+export type DeleteCampaignSchema = typeof deleteCampaignSchema;

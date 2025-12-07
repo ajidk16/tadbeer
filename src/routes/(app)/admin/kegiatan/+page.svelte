@@ -627,9 +627,10 @@
 				<div class="modal-action">
 					<button type="button" class="btn btn-ghost" onclick={closeFormModal}>Batal</button>
 					<button type="submit" class="btn btn-primary" disabled={$delayed}>
-						{#if $delayed}<span class="loading loading-spinner loading-sm"></span>{:else}<Save
-								class="w-4 h-4"
-							/>{/if}
+						{#if $delayed}
+							<span class="loading loading-spinner loading-sm"></span>
+						{:else}
+							<Save class="w-4 h-4" />{/if}
 						Simpan
 					</button>
 				</div>

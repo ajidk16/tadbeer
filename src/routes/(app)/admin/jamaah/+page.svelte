@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { Badge, Toast, success as toastSuccess, error as toastError } from '$lib/components/ui';
+	import { superForm } from 'sveltekit-superforms';
 	import {
 		Plus,
 		Search,
@@ -22,6 +23,18 @@
 
 	let { data } = $props();
 
+	const { form, errors, constraints, message, delayed } = superForm(data.form, {
+		onResult: ({ result }) => {
+			if (result.type === 'success') {
+				toastSuccess(isEditMode ? 'Data jamaah diperbarui' : 'Jamaah berhasil ditambahkan');
+				showFormModal = false;
+				selectedMember = null; // Clear selected member after successful operation
+			} else if (result.type === 'failure') {
+				toastError(result.data?.error || 'Gagal menyimpan data');
+			}
+		}
+	});
+
 	// Filter & search
 	let searchQuery = $state('');
 	let selectedGender = $state('');
@@ -32,7 +45,9 @@
 	let showDeleteModal = $state(false);
 	let showImportModal = $state(false);
 	let showBroadcastModal = $state(false);
+	let showFormModal = $state(false); // New for Add/Edit
 	let selectedMember = $state<(typeof data.members)[0] | null>(null);
+	let isEditMode = $state(false);
 
 	// Import states
 	let importFile = $state<File | null>(null);
@@ -50,7 +65,7 @@
 			const q = searchQuery.toLowerCase();
 			result = result.filter(
 				(m) =>
-					m.name.toLowerCase().includes(q) ||
+					m.fullName.toLowerCase().includes(q) ||
 					m.phone?.includes(q) ||
 					m.email?.toLowerCase().includes(q)
 			);
@@ -75,7 +90,6 @@
 	}
 
 	function exportData(format: 'xlsx' | 'csv') {
-		// Generate CSV content
 		const headers = [
 			'Nama',
 			'NIK',
@@ -86,8 +100,8 @@
 			'Alamat',
 			'Status'
 		];
-		const rows = (data.members || []).map((m) => [
-			m.name,
+		const rows = (filteredMembers() || []).map((m) => [
+			m.fullName,
 			m.nik || '',
 			m.gender === 'male' ? 'Laki-laki' : 'Perempuan',
 			m.birthDate || '',
@@ -104,9 +118,9 @@
 		const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
 		const link = document.createElement('a');
 		link.href = URL.createObjectURL(blob);
-		link.download = `jamaah_${new Date().toISOString().split('T')[0]}.${format === 'xlsx' ? 'csv' : 'csv'}`;
+		link.download = `jamaah_${new Date().toISOString().split('T')[0]}.csv`;
 		link.click();
-		toastSuccess(`Data berhasil diexport ke ${format.toUpperCase()}`);
+		toastSuccess(`Data berhasil diexport ke CSV`);
 	}
 
 	async function handleImport() {
@@ -149,6 +163,39 @@
 		showDetailModal = true;
 	}
 
+	function openForm(member?: (typeof data.members)[0]) {
+		if (member) {
+			selectedMember = member;
+			isEditMode = true;
+			// Populate form
+			$form.id = member.id;
+			$form.fullName = member.fullName;
+			$form.nik = member.nik || '';
+			$form.gender = member.gender;
+			$form.birthDate = member.birthDate
+				? new Date(member.birthDate).toISOString().split('T')[0]
+				: '';
+			$form.phone = member.phone || '';
+			$form.email = member.email || '';
+			$form.address = member.address || '';
+			$form.status = member.status || 'active';
+		} else {
+			selectedMember = null;
+			isEditMode = false;
+			// Reset form
+			$form.id = undefined;
+			$form.fullName = '';
+			$form.nik = '';
+			$form.gender = '';
+			$form.birthDate = '';
+			$form.phone = '';
+			$form.email = '';
+			$form.address = '';
+			$form.status = 'active';
+		}
+		showFormModal = true;
+	}
+
 	function openDelete(member: (typeof data.members)[0]) {
 		selectedMember = member;
 		showDeleteModal = true;
@@ -168,6 +215,7 @@
 	}
 </script>
 
+```html
 <svelte:head>
 	<title>Jamaah | TadBeer</title>
 </svelte:head>
@@ -196,11 +244,6 @@
 				</button>
 				<ul class="dropdown-content menu bg-base-100 rounded-box shadow-lg z-10 w-40 p-2">
 					<li>
-						<button onclick={() => exportData('xlsx')}
-							><FileSpreadsheet class="w-4 h-4" /> Excel</button
-						>
-					</li>
-					<li>
 						<button onclick={() => exportData('csv')}
 							><FileSpreadsheet class="w-4 h-4" /> CSV</button
 						>
@@ -214,10 +257,10 @@
 				Broadcast
 			</button>
 
-			<a href="/admin/jamaah/tambah" class="btn btn-primary btn-sm">
+			<button class="btn btn-primary btn-sm" onclick={() => openForm()}>
 				<Plus class="w-4 h-4" />
 				Tambah
-			</a>
+			</button>
 		</div>
 	</div>
 
@@ -287,19 +330,13 @@
 							<tr class="hover:bg-base-200/50">
 								<td>
 									<div class="flex items-center gap-3">
-										<div class="avatar {member.avatar ? '' : 'placeholder'}">
-											{#if member.avatar}
-												<div class="w-10 rounded-full">
-													<img src={member.avatar} alt={member.name} />
-												</div>
-											{:else}
-												<div class="bg-primary/10 text-primary rounded-full w-10">
-													<span class="text-sm">{member.name.charAt(0).toUpperCase()}</span>
-												</div>
-											{/if}
+										<div class="avatar placeholder">
+											<div class="bg-primary/10 text-primary rounded-full w-10">
+												<span class="text-sm">{member.fullName.charAt(0).toUpperCase()}</span>
+											</div>
 										</div>
 										<div>
-											<div class="font-medium">{member.name}</div>
+											<div class="font-medium">{member.fullName}</div>
 											{#if member.nik}
 												<div class="text-xs text-base-content/50">NIK: {member.nik}</div>
 											{/if}
@@ -327,8 +364,8 @@
 								</td>
 								<td class="text-sm">{calculateAge(member.birthDate)}</td>
 								<td>
-									<Badge variant={getStatusBadge(member.status) as any} size="sm">
-										{member.status === 'active' ? 'Aktif' : 'Tidak Aktif'}
+									<Badge variant={getStatusBadge(member.status || 'active') as any} size="sm">
+										{(member.status || 'active') === 'active' ? 'Aktif' : 'Tidak Aktif'}
 									</Badge>
 								</td>
 								<td>
@@ -339,9 +376,12 @@
 										>
 											<Eye class="w-4 h-4" />
 										</button>
-										<a href="/admin/jamaah/{member.id}/edit" class="btn btn-ghost btn-xs btn-square">
+										<button
+											class="btn btn-ghost btn-xs btn-square"
+											onclick={() => openForm(member)}
+										>
 											<SquarePen class="w-4 h-4" />
-										</a>
+										</button>
 										<button
 											class="btn btn-ghost btn-xs btn-square text-error"
 											onclick={() => openDelete(member)}
@@ -381,25 +421,20 @@
 			</button>
 
 			<div class="flex items-center gap-4 mb-4">
-				<div class="avatar {selectedMember.avatar ? '' : 'placeholder'}">
-					{#if selectedMember.avatar}
-						<div class="w-16 rounded-full">
-							<img src={selectedMember.avatar} alt={selectedMember.name} />
-						</div>
-					{:else}
-						<div class="bg-primary/10 text-primary rounded-full w-16">
-							<span class="text-2xl">{selectedMember.name.charAt(0).toUpperCase()}</span>
-						</div>
-					{/if}
+				<div class="avatar placeholder">
+					<div class="bg-primary/10 text-primary rounded-full w-16">
+						<span class="text-2xl">{selectedMember.fullName.charAt(0).toUpperCase()}</span>
+					</div>
 				</div>
 				<div>
-					<h3 class="font-bold text-xl">{selectedMember.name}</h3>
-					<Badge variant={getStatusBadge(selectedMember.status) as any}>
-						{selectedMember.status === 'active' ? 'Aktif' : 'Tidak Aktif'}
+					<h3 class="font-bold text-xl">{selectedMember.fullName}</h3>
+					<Badge variant={getStatusBadge(selectedMember.status || 'active') as any}>
+						{(selectedMember.status || 'active') === 'active' ? 'Aktif' : 'Tidak Aktif'}
 					</Badge>
 				</div>
 			</div>
 
+			<!-- Detail Content -->
 			<div class="space-y-3">
 				{#if selectedMember.nik}
 					<div class="flex items-center gap-3">
@@ -451,9 +486,15 @@
 			</div>
 
 			<div class="modal-action">
-				<a href="/admin/jamaah/{selectedMember.id}/edit" class="btn btn-primary btn-sm">
+				<button
+					class="btn btn-primary btn-sm"
+					onclick={() => {
+						showDetailModal = false;
+						openForm(selectedMember);
+					}}
+				>
 					<SquarePen class="w-4 h-4" /> Edit
-				</a>
+				</button>
 				<button
 					class="btn btn-ghost btn-sm"
 					onclick={() => {
@@ -464,12 +505,149 @@
 			</div>
 		</div>
 		<form method="dialog" class="modal-backdrop">
+			<button onclick={() => (showDetailModal = false)}>close</button>
+		</form>
+	</dialog>
+{/if}
+
+<!-- Form Modal (Add/Edit) -->
+{#if showFormModal}
+	<dialog class="modal modal-open">
+		<div class="modal-box">
 			<button
+				class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2"
 				onclick={() => {
-					showDetailModal = false;
+					showFormModal = false;
 					selectedMember = null;
-				}}>close</button
+				}}
 			>
+				<X class="w-4 h-4" />
+			</button>
+			<h3 class="font-bold text-lg mb-4">{isEditMode ? 'Edit Jamaah' : 'Tambah Jamaah'}</h3>
+			<form method="POST" action={isEditMode ? '?/update' : '?/create'} use:enhance>
+				{#if isEditMode}
+					<input type="hidden" name="id" value={$form.id} />
+				{/if}
+
+				<div class="space-y-4">
+					<div class="form-control">
+						<label for="fullName" class="label text-sm font-medium">Nama Lengkap</label>
+						<input
+							type="text"
+							name="fullName"
+							class="input input-bordered"
+							bind:value={$form.fullName}
+							{...$constraints.fullName}
+						/>
+						{#if $errors.fullName}<span class="text-error text-xs mt-1">{$errors.fullName}</span
+							>{/if}
+					</div>
+
+					<div class="grid grid-cols-2 gap-4">
+						<div class="form-control">
+							<label for="nik" class="label text-sm font-medium">NIK</label>
+							<input
+								type="text"
+								name="nik"
+								class="input input-bordered"
+								bind:value={$form.nik}
+								{...$constraints.nik}
+							/>
+							{#if $errors.nik}<span class="text-error text-xs mt-1">{$errors.nik}</span>{/if}
+						</div>
+						<div class="form-control">
+							<label for="gender" class="label text-sm font-medium">Gender</label>
+							<select
+								name="gender"
+								class="select select-bordered"
+								bind:value={$form.gender}
+								{...$constraints.gender}
+							>
+								<option value="" disabled>Pilih</option>
+								<option value="male">Laki-laki</option>
+								<option value="female">Perempuan</option>
+							</select>
+							{#if $errors.gender}<span class="text-error text-xs mt-1">{$errors.gender}</span>{/if}
+						</div>
+					</div>
+
+					<div class="grid grid-cols-2 gap-4">
+						<div class="form-control">
+							<label for="phone" class="label text-sm font-medium">No. Telepon</label>
+							<input
+								type="text"
+								name="phone"
+								class="input input-bordered"
+								bind:value={$form.phone}
+								{...$constraints.phone}
+							/>
+							{#if $errors.phone}<span class="text-error text-xs mt-1">{$errors.phone}</span>{/if}
+						</div>
+						<div class="form-control">
+							<label for="birthDate" class="label text-sm font-medium">Tanggal Lahir</label>
+							<input
+								type="date"
+								name="birthDate"
+								class="input input-bordered"
+								bind:value={$form.birthDate}
+								{...$constraints.birthDate}
+							/>
+							{#if $errors.birthDate}<span class="text-error text-xs mt-1">{$errors.birthDate}</span
+								>{/if}
+						</div>
+					</div>
+
+					<div class="form-control">
+						<label for="email" class="label text-sm font-medium">Email</label>
+						<input
+							type="email"
+							name="email"
+							class="input input-bordered"
+							bind:value={$form.email}
+							{...$constraints.email}
+						/>
+						{#if $errors.email}<span class="text-error text-xs mt-1">{$errors.email}</span>{/if}
+					</div>
+
+					<div class="form-control">
+						<label for="address" class="label text-sm font-medium">Alamat</label>
+						<textarea
+							name="address"
+							class="textarea textarea-bordered"
+							bind:value={$form.address}
+							{...$constraints.address}
+						></textarea>
+						{#if $errors.address}<span class="text-error text-xs mt-1">{$errors.address}</span>{/if}
+					</div>
+
+					<div class="form-control">
+						<label class="label cursor-pointer justify-start gap-4">
+							<span class="label-text font-medium">Status Aktif</span>
+							<input
+								type="checkbox"
+								class="toggle toggle-primary"
+								checked={$form.status === 'active'}
+								onchange={(e) => ($form.status = e.currentTarget.checked ? 'active' : 'inactive')}
+							/>
+							<!-- Hidden input to ensure value is sent if form binding is quirky with toggle -->
+							<input type="hidden" name="status" value={$form.status} />
+						</label>
+					</div>
+				</div>
+
+				<div class="modal-action">
+					<button type="button" class="btn btn-ghost" onclick={() => (showFormModal = false)}
+						>Batal</button
+					>
+					<button type="submit" class="btn btn-primary" disabled={$delayed}>
+						{#if $delayed}<span class="loading loading-spinner"></span>{/if}
+						Simpan
+					</button>
+				</div>
+			</form>
+		</div>
+		<form method="dialog" class="modal-backdrop">
+			<button onclick={() => (showFormModal = false)}>close</button>
 		</form>
 	</dialog>
 {/if}
@@ -481,7 +659,7 @@
 			<h3 class="font-bold text-lg text-error">⚠️ Hapus Jamaah</h3>
 			<p class="py-4">Apakah Anda yakin ingin menghapus data jamaah ini?</p>
 			<div class="bg-base-200 rounded-lg p-4 mb-4">
-				<p class="font-medium">{selectedMember.name}</p>
+				<p class="font-medium">{selectedMember.fullName}</p>
 				{#if selectedMember.phone}<p class="text-sm text-base-content/60">
 						{selectedMember.phone}
 					</p>{/if}
@@ -494,19 +672,14 @@
 						selectedMember = null;
 					}}>Batal</button
 				>
-				<form method="POST" action="?/delete" use:enhance={() => handleDelete()}>
+				<form method="POST" action="?/delete" use:enhance={handleDelete}>
 					<input type="hidden" name="id" value={selectedMember.id} />
 					<button type="submit" class="btn btn-error"><Trash2 class="w-4 h-4" /> Hapus</button>
 				</form>
 			</div>
 		</div>
 		<form method="dialog" class="modal-backdrop">
-			<button
-				onclick={() => {
-					showDeleteModal = false;
-					selectedMember = null;
-				}}>close</button
-			>
+			<button onclick={() => (showDeleteModal = false)}>close</button>
 		</form>
 	</dialog>
 {/if}
@@ -678,3 +851,4 @@
 		</form>
 	</dialog>
 {/if}
+```
