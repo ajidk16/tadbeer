@@ -1,16 +1,14 @@
 <script lang="ts">
 	import { superForm } from 'sveltekit-superforms';
 	import { goto } from '$app/navigation';
-	import { page } from '$app/stores';
-	import { ArrowLeft, Save, Camera, Upload, X, Trash2, Image as ImageIcon } from 'lucide-svelte';
+	import { ArrowLeft, Save, Upload, X, Trash2, Image as ImageIcon } from 'lucide-svelte';
 	import { Toast, success as toastSuccess, error as toastError } from '$lib/components/ui';
+	import { page } from '$app/state';
 
-	let { data } = $props();
+	// Use page.page.data.asset for static display or fallback, but form data is primary for inputs
+	const asset = page.data.asset;
 
-	// Use page.data.asset for static display or fallback, but form data is primary for inputs
-	const asset = data.asset;
-
-	const { form, errors, constraints, enhance, delayed } = superForm(data.form, {
+	const { form, errors, constraints, enhance, delayed } = superForm(page.data.form, {
 		onResult: ({ result }) => {
 			if (result.type === 'redirect') {
 				toastSuccess('Aset berhasil diperbarui');
@@ -21,7 +19,6 @@
 		}
 	});
 
-	let isSubmitting = $state(false); // Can use delayed from superform
 	let imagePreview = $state<string | null>(asset.imageUrl || null);
 	let imageInput: HTMLInputElement;
 

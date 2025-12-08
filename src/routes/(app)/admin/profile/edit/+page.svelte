@@ -5,10 +5,9 @@
 	import { valibotClient } from 'sveltekit-superforms/adapters';
 	import { profileSchema } from '$lib/schemas';
 	import { success as toastSuccess, error as toastError } from '$lib/components/ui';
+	import { page } from '$app/state';
 
-	let { data } = $props();
-
-	const { form, errors, enhance, submitting, message } = superForm(data.form, {
+	const { form, errors, enhance, submitting, message } = superForm(page.data.form, {
 		validators: valibotClient(profileSchema),
 		onResult: ({ result }) => {
 			if (result.type === 'success') {
@@ -20,7 +19,7 @@
 	});
 
 	let location = $state('Jakarta Selatan, Indonesia'); // Placeholder as not in DB
-	let avatarPreview = $state(data.user.avatarUrl);
+	let avatarPreview = $state(page.data.user.avatarUrl);
 	let fileInput: HTMLInputElement;
 
 	function handleFileChange(e: Event) {
@@ -60,7 +59,7 @@
 								{#if avatarPreview}
 									<img src={avatarPreview} alt="Avatar" />
 								{:else}
-									<span>{data.user.fullName?.charAt(0) || 'A'}</span>
+									<span>{page.data.user.fullName?.charAt(0) || 'A'}</span>
 								{/if}
 							</div>
 						</div>

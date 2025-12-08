@@ -20,13 +20,10 @@
 		XCircle,
 		MinusCircle
 	} from 'lucide-svelte';
-	import { onMount } from 'svelte';
 	import { superForm } from 'sveltekit-superforms';
 	import { valibotClient } from 'sveltekit-superforms/adapters';
 	import { eventSchema } from '$lib/schemas';
-	import { page } from '$app/stores';
-
-	let { data } = $props();
+	import { page } from '$app/state';
 
 	// View mode
 	let viewMode = $state<'list' | 'calendar'>('list');
@@ -56,7 +53,7 @@
 		enhance: superEnhance,
 		delayed,
 		message
-	} = superForm(data.form, {
+	} = superForm(page.data.form, {
 		validators: valibotClient(eventSchema),
 		onResult: ({ result }) => {
 			if (result.type === 'success') {
@@ -71,7 +68,7 @@
 	// Attendance state
 	// Initialize with members map
 	let attendanceList = $state(
-		(data.members || []).map((m) => ({
+		(page.data.members || []).map((m: { id: string; fullName: string }) => ({
 			id: m.id.toString(),
 			name: m.fullName,
 			status: 'present' // Default
@@ -96,15 +93,18 @@
 
 	// Filtered events
 	const filteredEvents = $derived(() => {
-		let result = data.events || [];
+		let result = page.data.events || [];
 		if (searchQuery) {
 			const q = searchQuery.toLowerCase();
 			result = result.filter(
-				(e) => e.title.toLowerCase().includes(q) || e.location?.toLowerCase().includes(q)
+				(e: { title: string; location?: string }) =>
+					e.title.toLowerCase().includes(q) || e.location?.toLowerCase().includes(q)
 			);
 		}
-		if (selectedCategory) result = result.filter((e) => e.category === selectedCategory);
-		if (selectedStatus) result = result.filter((e) => e.status === selectedStatus);
+		if (selectedCategory)
+			result = result.filter((e: { category: string }) => e.category === selectedCategory);
+		if (selectedStatus)
+			result = result.filter((e: { status: string }) => e.status === selectedStatus);
 		return result;
 	});
 
@@ -120,7 +120,7 @@
 
 	function getEventsForDay(day: number) {
 		const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-		return (data.events || []).filter((e) => e.date.startsWith(dateStr));
+		return (page.data.events || []).filter((e: { date: string }) => e.date.startsWith(dateStr));
 	}
 
 	function prevMonth() {
@@ -239,7 +239,9 @@
 	function openAbsensi(event: any) {
 		selectedEvent = event;
 
-		const eventRegistrants = (data.registrations || []).filter((r: any) => r.eventId === event.id);
+		const eventRegistrants = (page.data.registrations || []).filter(
+			(r: any) => r.eventId === event.id
+		);
 
 		const guests = eventRegistrants.map((r: any) => ({
 			id: `guest_${r.id}`,
@@ -253,7 +255,7 @@
 		// Initialize with members map
 		// In real app, we should probably fetch *existing* attendance from DB first to preserve status
 		// But for now, we recreate list.
-		const members = (data.members || []).map((m: any) => ({
+		const members = (page.data.members || []).map((m: any) => ({
 			id: `member_${m.id}`,
 			realId: m.id,
 			name: m.fullName,
@@ -267,7 +269,9 @@
 
 	// Local update for UI feedback
 	function updateAttendance(id: string, status: string) {
-		attendanceList = attendanceList.map((p) => (p.id === id ? { ...p, status } : p));
+		attendanceList = attendanceList.map((p: { id: string; status: string }) =>
+			p.id === id ? { ...p, status } : p
+		);
 	}
 
 	function saveAttendance() {
@@ -317,17 +321,17 @@
 	<div class="stats stats-vertical sm:stats-horizontal shadow w-full">
 		<div class="stat">
 			<div class="stat-title">Total Kegiatan</div>
-			<div class="stat-value text-xl">{data.totalEvents || 0}</div>
+			<div class="stat-value text-xl">{page.data.totalEvents || 0}</div>
 			<div class="stat-desc">Bulan ini</div>
 		</div>
 		<div class="stat">
 			<div class="stat-title">Akan Datang</div>
-			<div class="stat-value text-primary text-xl">{data.upcomingCount || 0}</div>
+			<div class="stat-value text-primary text-xl">{page.data.upcomingCount || 0}</div>
 			<div class="stat-desc">kegiatan</div>
 		</div>
 		<div class="stat">
 			<div class="stat-title">Selesai</div>
-			<div class="stat-value text-success text-xl">{data.completedCount || 0}</div>
+			<div class="stat-value text-success text-xl">{page.data.completedCount || 0}</div>
 			<div class="stat-desc">kegiatan</div>
 		</div>
 	</div>

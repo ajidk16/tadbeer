@@ -1,22 +1,30 @@
 <script lang="ts">
-import { enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
-    import { superForm } from 'sveltekit-superforms';
-    import Toast, { success as toastSuccess, error as toastError } from '$lib/components/ui/Toast.svelte';
+	import { superForm } from 'sveltekit-superforms';
+	import Toast, {
+		success as toastSuccess,
+		error as toastError
+	} from '$lib/components/ui/Toast.svelte';
 	import { ArrowLeft, Save, Camera, Upload, X } from 'lucide-svelte';
+	import { page } from '$app/state';
 
-	let { data } = $props();
-
-    const { form, errors, constraints, message, delayed, enhance: superEnhance } = superForm(data.form, {
-        onResult: ({ result }) => {
-            if (result.type === 'redirect') {
-                toastSuccess('Jamaah berhasil ditambahkan');
-                goto(result.location);
-            } else if (result.type === 'failure') {
-                toastError(result.data?.form?.message || 'Gagal menyimpan');
-            }
-        }
-    });
+	const {
+		form,
+		errors,
+		constraints,
+		message,
+		delayed,
+		enhance: superEnhance
+	} = superForm(page.data.form, {
+		onResult: ({ result }) => {
+			if (result.type === 'redirect') {
+				toastSuccess('Jamaah berhasil ditambahkan');
+				goto(result.location);
+			} else if (result.type === 'failure') {
+				toastError(result.data?.form?.message || 'Gagal menyimpan');
+			}
+		}
+	});
 
 	let avatarPreview = $state<string | null>(null);
 	let avatarInput = $state<HTMLInputElement>(); // Fix typing and init
@@ -93,7 +101,7 @@ import { enhance } from '$app/forms';
 						<button
 							type="button"
 							class="btn btn-sm btn-outline"
-							onclick={() => avatarInput.click()}
+							onclick={() => avatarInput?.click()}
 						>
 							<Upload class="w-4 h-4" /> Pilih Foto
 						</button>
@@ -123,94 +131,111 @@ import { enhance } from '$app/forms';
 					name="name"
 					class="input input-bordered w-full"
 					placeholder="Ahmad Sudrajat"
-                    bind:value={$form.name}
-                    {...$constraints.name}
+					bind:value={$form.name}
+					{...$constraints.name}
 				/>
 			</div>
 
-						<div class="form-control">
-							<label for="nik" class="label text-sm font-medium">NIK</label>
-							<input
-								type="text"
-								name="nik"
-								class="input input-bordered w-full"
-								placeholder="16 digit"
-								maxlength="16"
-                                bind:value={$form.nik}
-                                {...$constraints.nik}
-							/>
-							{#if $errors.nik}<span class="text-error text-xs mt-1">{$errors.nik}</span>{/if}
-						</div>
+			<div class="form-control">
+				<label for="nik" class="label text-sm font-medium">NIK</label>
+				<input
+					type="text"
+					name="nik"
+					class="input input-bordered w-full"
+					placeholder="16 digit"
+					maxlength="16"
+					bind:value={$form.nik}
+					{...$constraints.nik}
+				/>
+				{#if $errors.nik}<span class="text-error text-xs mt-1">{$errors.nik}</span>{/if}
+			</div>
 
-						<div class="form-control">
-							<label for="gender" class="label"
-								><span class="label-text">Jenis Kelamin <span class="text-error">*</span></span></label
-							>
-							<select name="gender" class="select select-bordered w-full" bind:value={$form.gender} {...$constraints.gender} required>
-								<option value="" disabled selected>Pilih</option>
-								<option value="male">Laki-laki</option>
-								<option value="female">Perempuan</option>
-							</select>
-                            {#if $errors.gender}<span class="text-error text-xs mt-1">{$errors.gender}</span>{/if}
-						</div>
+			<div class="form-control">
+				<label for="gender" class="label"
+					><span class="label-text">Jenis Kelamin <span class="text-error">*</span></span></label
+				>
+				<select
+					name="gender"
+					class="select select-bordered w-full"
+					bind:value={$form.gender}
+					{...$constraints.gender}
+					required
+				>
+					<option value="" disabled selected>Pilih</option>
+					<option value="male">Laki-laki</option>
+					<option value="female">Perempuan</option>
+				</select>
+				{#if $errors.gender}<span class="text-error text-xs mt-1">{$errors.gender}</span>{/if}
+			</div>
 
-					<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-						<!-- Birth Date -->
-						<div class="form-control">
-							<label for="birthDate" class="label"><span class="label-text">Tanggal Lahir</span></label>
-							<input type="date" name="birthDate" class="input input-bordered w-full" bind:value={$form.birthDate} {...$constraints.birthDate} />
-						</div>
+			<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+				<!-- Birth Date -->
+				<div class="form-control">
+					<label for="birthDate" class="label"><span class="label-text">Tanggal Lahir</span></label>
+					<input
+						type="date"
+						name="birthDate"
+						class="input input-bordered w-full"
+						bind:value={$form.birthDate}
+						{...$constraints.birthDate}
+					/>
+				</div>
 
-						<!-- Phone -->
-						<div class="form-control">
-							<label for="phone" class="label"><span class="label-text">No. Telepon</span></label>
-							<input
-								type="tel"
-								name="phone"
-								class="input input-bordered w-full"
-								placeholder="08xxxxxxxxxx"
-                                bind:value={$form.phone}
-                                {...$constraints.phone}
-							/>
-                            {#if $errors.phone}<span class="text-error text-xs mt-1">{$errors.phone}</span>{/if}
-						</div>
-					</div>
+				<!-- Phone -->
+				<div class="form-control">
+					<label for="phone" class="label"><span class="label-text">No. Telepon</span></label>
+					<input
+						type="tel"
+						name="phone"
+						class="input input-bordered w-full"
+						placeholder="08xxxxxxxxxx"
+						bind:value={$form.phone}
+						{...$constraints.phone}
+					/>
+					{#if $errors.phone}<span class="text-error text-xs mt-1">{$errors.phone}</span>{/if}
+				</div>
+			</div>
 
-					<!-- Email -->
-					<div class="form-control">
-						<label for="email" class="label"><span class="label-text">Email</span></label>
-						<input
-							type="email"
-							name="email"
-							class="input input-bordered w-full"
-							placeholder="email@example.com"
-                            bind:value={$form.email}
-                            {...$constraints.email}
-						/>
-                        {#if $errors.email}<span class="text-error text-xs mt-1">{$errors.email}</span>{/if}
-					</div>
+			<!-- Email -->
+			<div class="form-control">
+				<label for="email" class="label"><span class="label-text">Email</span></label>
+				<input
+					type="email"
+					name="email"
+					class="input input-bordered w-full"
+					placeholder="email@example.com"
+					bind:value={$form.email}
+					{...$constraints.email}
+				/>
+				{#if $errors.email}<span class="text-error text-xs mt-1">{$errors.email}</span>{/if}
+			</div>
 
-					<!-- Address -->
-					<div class="form-control">
-						<label for="address" class="label"><span class="label-text">Alamat</span></label>
-						<textarea
-							name="address"
-							class="textarea textarea-bordered w-full"
-							rows="3"
-							placeholder="Alamat lengkap..."
-                            bind:value={$form.address}
-                            {...$constraints.address}
-						></textarea>
-					</div>
+			<!-- Address -->
+			<div class="form-control">
+				<label for="address" class="label"><span class="label-text">Alamat</span></label>
+				<textarea
+					name="address"
+					class="textarea textarea-bordered w-full"
+					rows="3"
+					placeholder="Alamat lengkap..."
+					bind:value={$form.address}
+					{...$constraints.address}
+				></textarea>
+			</div>
 
-					<!-- Status -->
-					<div class="form-control">
-						<label for="status" class="label"><span class="label-text">Status</span></label>
-						<select name="status" class="select select-bordered w-full" bind:value={$form.status} {...$constraints.status}>
-							<option value="active" selected>Aktif</option>
-							<option value="inactive">Tidak Aktif</option>
-						</select>
-					</div>
+			<!-- Status -->
+			<div class="form-control">
+				<label for="status" class="label"><span class="label-text">Status</span></label>
+				<select
+					name="status"
+					class="select select-bordered w-full"
+					bind:value={$form.status}
+					{...$constraints.status}
+				>
+					<option value="active" selected>Aktif</option>
+					<option value="inactive">Tidak Aktif</option>
+				</select>
+			</div>
 
 			<!-- Actions -->
 			<div class="flex justify-end gap-2 pt-4 border-t border-base-200">

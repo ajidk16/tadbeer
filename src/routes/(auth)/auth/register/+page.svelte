@@ -1,13 +1,11 @@
 <script lang="ts">
 	import { Eye, EyeOff, UserPlus, X } from 'lucide-svelte';
 	import { superForm } from 'sveltekit-superforms';
-	import type { PageData } from './$types';
 	import { registerSchema } from '$lib/schemas';
 	import { valibotClient } from 'sveltekit-superforms/adapters';
+	import { page } from '$app/state';
 
-	let { data }: { data: PageData } = $props();
-
-	const { form, errors, constraints, enhance, delayed } = superForm(data.form, {
+	const { form, errors, constraints, enhance, delayed } = superForm(page.data.form, {
 		validators: valibotClient(registerSchema)
 	});
 
@@ -91,7 +89,7 @@
 						{...$constraints.name}
 					/>
 					{#if $errors.name}
-						<label class="label">
+						<label for="" class="label">
 							<span class="label-text-alt text-error">{$errors.name}</span>
 						</label>
 					{/if}
@@ -112,7 +110,7 @@
 						{...$constraints.email}
 					/>
 					{#if $errors.email}
-						<label class="label">
+						<label for="" class="label">
 							<span class="label-text-alt text-error">{$errors.email}</span>
 						</label>
 					{/if}
@@ -145,7 +143,7 @@
 						</button>
 					</div>
 					{#if $errors.password}
-						<label class="label">
+						<label for="" class="label">
 							<span class="label-text-alt text-error">{$errors.password}</span>
 						</label>
 					{/if}

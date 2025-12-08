@@ -5,10 +5,9 @@
 	import { valibotClient } from 'sveltekit-superforms/adapters';
 	import { securitySchema } from '$lib/schemas';
 	import { success as toastSuccess, error as toastError } from '$lib/components/ui';
+	import { page } from '$app/state';
 
-	let { data } = $props();
-
-	const { form, errors, enhance, submitting, message } = superForm(data.form, {
+	const { form, errors, enhance, submitting, message } = superForm(page.data.form, {
 		validators: valibotClient(securitySchema),
 		onResult: ({ result }) => {
 			if (result.type === 'success') {

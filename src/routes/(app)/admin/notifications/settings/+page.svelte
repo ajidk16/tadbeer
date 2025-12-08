@@ -2,10 +2,9 @@
 	import { ArrowLeft, Bell, Mail, Smartphone, Save } from 'lucide-svelte';
 	import { superForm } from 'sveltekit-superforms';
 	import { Toast, success as toastSuccess, error as toastError } from '$lib/components/ui';
+	import { page } from '$app/state';
 
-	let { data } = $props();
-
-	const { form, errors, enhance, submitting } = superForm(data.form, {
+	const { form, errors, enhance, submitting } = superForm(page.data.form, {
 		onResult: ({ result }) => {
 			if (result.type === 'success') {
 				toastSuccess(result.data?.message || 'Settings saved successfully');

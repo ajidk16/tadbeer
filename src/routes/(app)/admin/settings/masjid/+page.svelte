@@ -3,15 +3,14 @@
 	import { valibotClient } from 'sveltekit-superforms/adapters';
 	import { mosqueProfileSchema } from '$lib/schemas';
 	import { Camera, Save } from 'lucide-svelte';
+	import { page } from '$app/state';
 
-	let { data } = $props();
-
-	const { form, errors, constraints, enhance, message, delayed } = superForm(data.form, {
+	const { form, errors, constraints, enhance, message, delayed } = superForm(page.data.form, {
 		validators: valibotClient(mosqueProfileSchema),
 		resetForm: false
 	});
 
-	let previewUrl = $state(data.form.data.imageUrl || '');
+	let previewUrl = $state(page.data.form.data.imageUrl || '');
 
 	function handleFileChange(e: Event) {
 		const input = e.target as HTMLInputElement;
@@ -77,7 +76,8 @@
 				<button
 					type="button"
 					class="btn btn-outline btn-sm mt-3"
-					onclick={() => document.querySelector('input[name="image"]')?.click()}
+					onclick={() =>
+						(document.querySelector('input[name="image"]') as HTMLInputElement)?.click()}
 				>
 					Upload New
 				</button>

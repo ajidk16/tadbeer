@@ -13,26 +13,22 @@
 		Save,
 		Image as ImageIcon
 	} from 'lucide-svelte';
-	import { onMount, tick } from 'svelte';
-
-	let { data } = $props();
+	import { page } from '$app/state';
+	import { enhance as svelteEnhance } from '$app/forms';
 
 	// Initialize superform
-	const { form, errors, message, constraints, enhance, submitting, capture, restore } = superForm(
-		data.form,
-		{
-			validators: valibotClient(transactionSchema),
-			resetForm: false, // Don't reset automatically, we handle it
-			onResult: async ({ result }) => {
-				if (result.type === 'success') {
-					toastSuccess(isEditMode ? 'Berhasil diperbarui' : 'Berhasil ditambahkan');
-					closeFormModal();
-				} else if (result.type === 'failure') {
-					toastError(result.data?.message || 'Terjadi kesalahan');
-				}
+	const { form, errors, constraints, enhance, submitting } = superForm(page.data.form, {
+		validators: valibotClient(transactionSchema),
+		resetForm: false, // Don't reset automatically, we handle it
+		onResult: async ({ result }) => {
+			if (result.type === 'success') {
+				toastSuccess(isEditMode ? 'Berhasil diperbarui' : 'Berhasil ditambahkan');
+				closeFormModal();
+			} else if (result.type === 'failure') {
+				toastError(result.data?.message || 'Terjadi kesalahan');
 			}
 		}
-	);
+	});
 
 	// Filter states
 	let searchQuery = $state('');
@@ -43,7 +39,7 @@
 	let showDeleteModal = $state(false);
 	let showFormModal = $state(false);
 	let isEditMode = $state(false);
-	let selectedTransaction = $state<(typeof data.transactions)[0] | null>(null);
+	let selectedTransaction = $state<(typeof page.data.transactions)[0] | null>(null);
 	let fileInput: HTMLInputElement;
 	let previewUrl = $state<string | undefined>(undefined);
 
@@ -69,25 +65,30 @@
 
 	// Filtered transactions
 	const filteredTransactions = $derived(() => {
-		let result = data.transactions || [];
+		let result = page.data.transactions || [];
 
 		if (searchQuery) {
 			const query = searchQuery.toLowerCase();
 			result = result.filter(
-				(tx) =>
+				(tx: (typeof page.data.transactions)[0]) =>
 					tx.description.toLowerCase().includes(query) || tx.category.toLowerCase().includes(query)
 			);
 		}
 
 		if (selectedCategory) {
-			result = result.filter((tx) => tx.category === selectedCategory);
+			result = result.filter(
+				(tx: (typeof page.data.transactions)[0]) => tx.category === selectedCategory
+			);
 		}
 
 		return result;
 	});
 
 	const totalAmount = $derived(
-		filteredTransactions().reduce((sum, tx) => sum + Number(tx.amount), 0)
+		filteredTransactions().reduce(
+			(sum: number, tx: (typeof page.data.transactions)[0]) => sum + Number(tx.amount),
+			0
+		)
 	);
 
 	// Open form modal for add
@@ -107,7 +108,7 @@
 	}
 
 	// Open form modal for edit
-	function openEditModal(tx: (typeof data.transactions)[0]) {
+	function openEditModal(tx: (typeof page.data.transactions)[0]) {
 		isEditMode = true;
 		selectedTransaction = tx;
 		// Fill form
@@ -129,12 +130,12 @@
 		selectedTransaction = null;
 	}
 
-	function openDetail(tx: (typeof data.transactions)[0]) {
+	function openDetail(tx: (typeof page.data.transactions)[0]) {
 		selectedTransaction = tx;
 		showDetailModal = true;
 	}
 
-	function openDelete(tx: (typeof data.transactions)[0]) {
+	function openDelete(tx: (typeof page.data.transactions)[0]) {
 		selectedTransaction = tx;
 		showDeleteModal = true;
 	}
@@ -150,7 +151,7 @@
 	// Export Functions
 	function exportToCSV() {
 		const headers = ['Tanggal', 'Kategori', 'Keterangan', 'Jumlah', 'Catatan'];
-		const rows = filteredTransactions().map((tx) => [
+		const rows = filteredTransactions().map((tx: (typeof page.data.transactions)[0]) => [
 			new Date(tx.date).toLocaleDateString('id-ID'),
 			tx.category,
 			`"${tx.description}"`, // Quote description to handle commas
@@ -158,7 +159,7 @@
 			`"${tx.notes || ''}"`
 		]);
 
-		const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+		const csvContent = [headers.join(','), ...rows.map((r: any[]) => r.join(','))].join('\n');
 		const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
 		const url = URL.createObjectURL(blob);
 		const link = document.createElement('a');
@@ -232,19 +233,21 @@
 	<div class="stats stats-vertical sm:stats-horizontal shadow w-full">
 		<div class="stat">
 			<div class="stat-title">Total Pemasukan</div>
-			<div class="stat-value text-success text-xl">{formatCurrency(data.totalIncome || 0)}</div>
+			<div class="stat-value text-success text-xl">
+				{formatCurrency(page.data.totalIncome || 0)}
+			</div>
 			<div class="stat-desc">Bulan ini</div>
 		</div>
 		<div class="stat">
 			<div class="stat-title">Jumlah Transaksi</div>
-			<div class="stat-value text-xl">{data.transactionCount || 0}</div>
+			<div class="stat-value text-xl">{page.data.transactionCount || 0}</div>
 			<div class="stat-desc">transaksi</div>
 		</div>
 		<div class="stat">
 			<div class="stat-title">Rata-rata</div>
 			<div class="stat-value text-xl">
 				{formatCurrency(
-					data.transactionCount ? (data.totalIncome || 0) / data.transactionCount : 0
+					page.data.transactionCount ? (page.data.totalIncome || 0) / page.data.transactionCount : 0
 				)}
 			</div>
 			<div class="stat-desc">per transaksi</div>
@@ -263,7 +266,7 @@
 		</div>
 		<select class="select select-bordered select-sm" bind:value={selectedCategory}>
 			<option value="">Semua Kategori</option>
-			{#each data.categories || [] as cat}
+			{#each page.data.categories || [] as cat}
 				<option value={cat}>{cat}</option>
 			{/each}
 		</select>
@@ -653,7 +656,7 @@
 				<form
 					method="POST"
 					action="?/delete"
-					use:enhance={() => {
+					use:svelteEnhance={() => {
 						return async ({ result, update }: any) => {
 							showDeleteModal = false;
 							selectedTransaction = null;

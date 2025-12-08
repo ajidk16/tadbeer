@@ -183,7 +183,7 @@
 				</div>
 
 				<!-- Menu Items -->
-				<ul class="menu p-2">
+				<ul class="menu p-2 w-full">
 					<li>
 						<a href="/admin/profile" class="flex items-center gap-3">
 							<User class="w-4 h-4" />

@@ -4,16 +4,15 @@
 	import { inviteUserSchema, updateUserRoleSchema } from '$lib/schemas';
 	import { Plus, MoreVertical, Trash2, Shield, Search } from 'lucide-svelte';
 	import { enhance } from '$app/forms';
-	import { Badge, Toast, success as toastSuccess, error as toastError } from '$lib/components/ui';
-
-	let { data } = $props();
+	import { success as toastSuccess, error as toastError } from '$lib/components/ui';
+	import { page } from '$app/state';
 
 	const {
 		form: inviteForm,
 		errors: inviteErrors,
 		enhance: inviteEnhance,
 		message: inviteMessage
-	} = superForm(data.inviteForm, {
+	} = superForm(page.data.inviteForm, {
 		validators: valibotClient(inviteUserSchema),
 		onResult: ({ result }) => {
 			if (result.type === 'success') {
@@ -22,7 +21,7 @@
 		}
 	});
 
-	const { form: roleForm, enhance: roleEnhance } = superForm(data.roleForm, {
+	const { form: roleForm, enhance: roleEnhance } = superForm(page.data.roleForm, {
 		validators: valibotClient(updateUserRoleSchema),
 		onResult: ({ result }) => {
 			if (result.type === 'success') {
@@ -36,8 +35,8 @@
 	let showDeleteModal = $state(false);
 
 	let filteredUsers = $derived(
-		data.users.filter(
-			(u) =>
+		page.data.users.filter(
+			(u: { fullName?: string; username: string }) =>
 				u.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
 				u.username.toLowerCase().includes(searchTerm.toLowerCase())
 		)
@@ -230,7 +229,7 @@
 				</label>
 				<select name="roleId" bind:value={$inviteForm.roleId} class="select select-bordered w-full">
 					<option value="" disabled selected>Select a role</option>
-					{#each data.roles as role}
+					{#each page.data.roles as role}
 						<option value={role.id}>{role.name}</option>
 					{/each}
 				</select>
@@ -269,7 +268,7 @@
 					<span class="label-text">Select New Role</span>
 				</label>
 				<select name="roleId" bind:value={$roleForm.roleId} class="select select-bordered w-full">
-					{#each data.roles as role}
+					{#each page.data.roles as role}
 						<option value={role.id}>{role.name}</option>
 					{/each}
 				</select>

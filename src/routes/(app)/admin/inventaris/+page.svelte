@@ -6,24 +6,17 @@
 		Plus,
 		Search,
 		Download,
-		Filter,
 		Box,
 		Wrench,
 		History,
-		MoreVertical,
 		SquarePen,
 		Trash2,
-		Eye,
 		Package,
 		DollarSign,
-		AlertTriangle,
 		Image as ImageIcon,
-		CheckCircle,
-		X
+		CheckCircle
 	} from 'lucide-svelte';
 	import { page } from '$app/state';
-
-	let { data } = $props();
 
 	// View state
 	let activeTab = $state('assets'); // assets, lending, maintenance
@@ -37,7 +30,7 @@
 		errors: lendingErrors,
 		enhance: lendingEnhance,
 		delayed: lendingDelayed
-	} = superForm(data.lendingForm, {
+	} = superForm(page.data.lendingForm, {
 		id: 'lendingForm',
 		onResult: ({ result }) => {
 			if (result.type === 'success') {
@@ -54,7 +47,7 @@
 		errors: maintenanceErrors,
 		enhance: maintenanceEnhance,
 		delayed: maintenanceDelayed
-	} = superForm(data.maintenanceForm, {
+	} = superForm(page.data.maintenanceForm, {
 		id: 'maintenanceForm',
 		onResult: ({ result }) => {
 			if (result.type === 'success') {
@@ -70,22 +63,24 @@
 	let showDeleteModal = $state(false);
 	let showLendingModal = $state(false);
 	let showMaintenanceModal = $state(false);
-	let selectedAsset = $state<(typeof data.assets)[0] | null>(null);
+	let selectedAsset = $state<(typeof page.data.assets)[0] | null>(null);
 
 	// Filtered assets
 	const filteredAssets = $derived(() => {
-		let result = data.assets || [];
+		let result = page.data.assets || [];
 		if (searchQuery) {
 			const q = searchQuery.toLowerCase();
 			result = result.filter(
-				(a) =>
+				(a: { name: string; code: string; location?: string }) =>
 					a.name.toLowerCase().includes(q) ||
 					a.code.toLowerCase().includes(q) ||
 					(a.location && a.location.toLowerCase().includes(q))
 			);
 		}
-		if (selectedCategory) result = result.filter((a) => a.category === selectedCategory);
-		if (selectedCondition) result = result.filter((a) => a.condition === selectedCondition);
+		if (selectedCategory)
+			result = result.filter((a: { category: string }) => a.category === selectedCategory);
+		if (selectedCondition)
+			result = result.filter((a: { condition: string }) => a.condition === selectedCondition);
 		return result;
 	});
 
@@ -118,7 +113,7 @@
 	}
 
 	// Delete Asset Logic
-	function openDelete(asset: (typeof data.assets)[0]) {
+	function openDelete(asset: (typeof page.data.assets)[0]) {
 		selectedAsset = asset;
 		showDeleteModal = true;
 	}
@@ -193,25 +188,27 @@
 		<div class="stat">
 			<div class="stat-figure text-primary"><Package class="w-8 h-8" /></div>
 			<div class="stat-title">Total Aset</div>
-			<div class="stat-value text-xl">{data.stats.totalAssets}</div>
+			<div class="stat-value text-xl">{page.data.stats.totalAssets}</div>
 			<div class="stat-desc">Unit barang</div>
 		</div>
 		<div class="stat">
 			<div class="stat-figure text-success"><DollarSign class="w-8 h-8" /></div>
 			<div class="stat-title">Total Nilai</div>
-			<div class="stat-value text-xl text-success">{formatCurrency(data.stats.totalValue)}</div>
+			<div class="stat-value text-xl text-success">
+				{formatCurrency(page.data.stats.totalValue)}
+			</div>
 			<div class="stat-desc">Estimasi nilai aset</div>
 		</div>
 		<div class="stat">
 			<div class="stat-figure text-warning"><Box class="w-8 h-8" /></div>
 			<div class="stat-title">Dipinjam</div>
-			<div class="stat-value text-xl text-warning">{data.stats.borrowed}</div>
+			<div class="stat-value text-xl text-warning">{page.data.stats.borrowed}</div>
 			<div class="stat-desc">Sedang dipinjam</div>
 		</div>
 		<div class="stat">
 			<div class="stat-figure text-error"><Wrench class="w-8 h-8" /></div>
 			<div class="stat-title">Perbaikan</div>
-			<div class="stat-value text-xl text-error">{data.stats.inMaintenance}</div>
+			<div class="stat-value text-xl text-error">{page.data.stats.inMaintenance}</div>
 			<div class="stat-desc">Dalam maintenance</div>
 		</div>
 	</div>
@@ -380,7 +377,7 @@
 								</tr>
 							</thead>
 							<tbody>
-								{#each data.lendings as lending (lending.id)}
+								{#each page.data.lendings as lending (lending.id)}
 									<tr class="hover:bg-base-200/50">
 										<td class="font-medium">
 											<div>{lending.assetName}</div>
@@ -467,7 +464,7 @@
 								</tr>
 							</thead>
 							<tbody>
-								{#each data.maintenance as log (log.id)}
+								{#each page.data.maintenance as log (log.id)}
 									<tr class="hover:bg-base-200/50">
 										<td class="font-medium">{log.assetName}</td>
 										<td

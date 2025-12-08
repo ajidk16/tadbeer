@@ -1,13 +1,11 @@
 <script lang="ts">
 	import { Mail, ArrowLeft, AlertCircle } from 'lucide-svelte';
 	import { superForm } from 'sveltekit-superforms';
-	import type { PageData } from './$types';
 	import { forgotPasswordSchema } from '$lib/schemas';
 	import { valibotClient } from 'sveltekit-superforms/adapters';
+	import { page } from '$app/state';
 
-	let { data }: { data: PageData } = $props();
-
-	const { form, errors, constraints, enhance, delayed, message } = superForm(data.form, {
+	const { form, errors, constraints, enhance, delayed, message } = superForm(page.data.form, {
 		validators: valibotClient(forgotPasswordSchema)
 	});
 </script>
@@ -44,7 +42,7 @@
 					{...$constraints.email}
 				/>
 				{#if $errors.email}
-					<label class="label">
+					<label for="" class="label">
 						<span class="label-text-alt text-error">{$errors.email}</span>
 					</label>
 				{/if}

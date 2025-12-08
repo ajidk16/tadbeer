@@ -9,8 +9,6 @@
 	} from '$lib/components/ui/Toast.svelte';
 	import { ArrowLeft, Save, Camera, Upload, X, Trash2 } from 'lucide-svelte';
 
-	let { data } = $props();
-
 	const {
 		form,
 		errors,
@@ -18,7 +16,7 @@
 		message,
 		delayed,
 		enhance: superEnhance
-	} = superForm(data.form, {
+	} = superForm(page.data.form, {
 		onResult: ({ result }) => {
 			if (result.type === 'redirect') {
 				toastSuccess('Data jamaah berhasil diperbarui');
@@ -30,8 +28,8 @@
 	});
 
 	let isSubmitting = $state(false);
-	// Use data.member for initial preview, but form state generally handles the rest? No, avatar is separate.
-	let avatarPreview = $state<string | null>(data.member?.imageUrl || null);
+	// Use page.data.member for initial preview, but form state generally handles the rest? No, avatar is separate.
+	let avatarPreview = $state<string | null>(page.data.member?.imageUrl || null);
 	let avatarInput = $state<HTMLInputElement>();
 
 	function handleAvatarChange(e: Event) {
@@ -117,7 +115,7 @@
 						<button
 							type="button"
 							class="btn btn-sm btn-outline"
-							onclick={() => avatarInput.click()}
+							onclick={() => avatarInput?.click()}
 						>
 							<Upload class="w-4 h-4" /> Ganti Foto
 						</button>

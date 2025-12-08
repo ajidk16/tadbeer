@@ -1,12 +1,11 @@
 <script lang="ts">
 	import { superForm } from 'sveltekit-superforms';
 	import { goto } from '$app/navigation';
-	import { ArrowLeft, Save, Camera, Upload, X, Image as ImageIcon } from 'lucide-svelte';
+	import { ArrowLeft, Save, Upload, X, Image as ImageIcon } from 'lucide-svelte';
 	import { Toast, success as toastSuccess, error as toastError } from '$lib/components/ui';
+	import { page } from '$app/state';
 
-	let { data } = $props();
-
-	const { form, errors, constraints, enhance, delayed } = superForm(data.form, {
+	const { form, errors, constraints, enhance, delayed } = superForm(page.data.form, {
 		onResult: ({ result }) => {
 			if (result.type === 'redirect') {
 				toastSuccess('Aset berhasil ditambahkan');

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { fail } from '@sveltejs/kit';
 import { superValidate } from 'sveltekit-superforms';
 import { valibot } from 'sveltekit-superforms/adapters';
@@ -5,7 +6,7 @@ import { db } from '$lib/server/db';
 import * as table from '$lib/server/db/schema';
 import { transactionSchema } from '$lib/schemas';
 import { uploadImageFromBuffer, deleteImage, getPublicIdFromUrl } from '$lib/server/cloudinary';
-import { eq, desc, and, sql } from 'drizzle-orm';
+import { eq, desc } from 'drizzle-orm';
 
 const TRANSACTION_TYPE = 'expense';
 
@@ -38,7 +39,7 @@ export const load = async () => {
 };
 
 export const actions = {
-	create: async ({ request, locals }) => {
+	create: async ({ request }) => {
 		const formData = await request.formData();
 		const form = await superValidate(formData, valibot(transactionSchema));
 

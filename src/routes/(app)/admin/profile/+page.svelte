@@ -17,6 +17,7 @@
 		errors: pErrors,
 		enhance: pEnhance,
 		message: pMessage
+		// svelte-ignore state_referenced_locally
 	} = superForm(profileForm, {
 		validators: valibotClient(profileSchema),
 		onResult: ({ result }) => {
@@ -35,6 +36,7 @@
 		enhance: sEnhance,
 		message: sMessage,
 		reset: sReset
+		// svelte-ignore state_referenced_locally
 	} = superForm(securityForm, {
 		validators: valibotClient(securitySchema),
 		onResult: ({ result }) => {

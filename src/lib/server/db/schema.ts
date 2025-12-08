@@ -10,7 +10,6 @@ import {
 	decimal,
 	jsonb
 } from 'drizzle-orm/pg-core';
-import { email } from 'valibot';
 
 // --- Enums ---
 export const roleEnum = pgEnum('role', ['super_admin', 'admin', 'imam', 'bendahara', 'jamaah']);

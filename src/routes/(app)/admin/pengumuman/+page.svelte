@@ -1,18 +1,7 @@
 <script lang="ts">
 	import { superForm } from 'sveltekit-superforms';
 	import { Badge, Toast, success as toastSuccess, error as toastError } from '$lib/components/ui';
-	import {
-		Plus,
-		Megaphone,
-		Calendar,
-		Trash2,
-		SquarePen,
-		Mic2,
-		Radio,
-		Save
-	} from 'lucide-svelte';
-
-	let { data } = $props();
+	import { Plus, Megaphone, Calendar, Trash2, SquarePen, Mic2, Radio, Save } from 'lucide-svelte';
 
 	// Initialize Superforms
 	const {
@@ -20,8 +9,8 @@
 		errors: announcementErrors,
 		enhance: announcementEnhance,
 		submitting: announcementSubmitting
-	} = superForm(data.announcementForm, {
-		onResult: ({ result}) => {
+	} = superForm(page.data.announcementForm, {
+		onResult: ({ result }) => {
 			if (result.type === 'success') {
 				toastSuccess(result.data?.message || 'Berhasil disimpan');
 				showAnnouncementModal = false;
@@ -36,8 +25,8 @@
 		errors: khutbahErrors,
 		enhance: khutbahEnhance,
 		submitting: khutbahSubmitting
-	} = superForm(data.khutbahForm, {
-		onResult: ({ result}) => {
+	} = superForm(page.data.khutbahForm, {
+		onResult: ({ result }) => {
 			if (result.type === 'success') {
 				toastSuccess(result.data?.message || 'Berhasil disimpan');
 				showKhutbahModal = false;
@@ -134,7 +123,7 @@
 	import { page } from '$app/state';
 
 	function handleDelete() {
-		return async ({ result}: any) => {
+		return async ({ result }: any) => {
 			showDeleteModal = false;
 			if (result.type === 'success') {
 				toastSuccess(result.data?.message || 'Data berhasil dihapus');
@@ -236,7 +225,7 @@
 						</div>
 					</div>
 				{/each}
-				{#if data.announcements.length === 0}
+				{#if announcement.length === 0}
 					<div class="text-center py-8 text-base-content/50">Belum ada pengumuman</div>
 				{/if}
 			</div>

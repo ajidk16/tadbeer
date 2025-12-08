@@ -1,13 +1,11 @@
 <script lang="ts">
 	import { superForm } from 'sveltekit-superforms';
 	import { CheckCircle, AlertCircle } from 'lucide-svelte';
-	import type { PageData } from './$types';
 	import { verifySchema } from '$lib/schemas';
 	import { valibotClient } from 'sveltekit-superforms/adapters';
+	import { page } from '$app/state';
 
-	let { data }: { data: PageData } = $props();
-
-	const { form, errors, constraints, enhance, delayed, message } = superForm(data.form, {
+	const { form, errors, constraints, enhance, delayed, message } = superForm(page.data.form, {
 		validators: valibotClient(verifySchema)
 	});
 </script>

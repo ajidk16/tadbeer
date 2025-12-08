@@ -1,15 +1,14 @@
 <script lang="ts">
-	import { Settings, Globe, Shield, Database, Save } from 'lucide-svelte';
+	import { Globe, Shield, Save } from 'lucide-svelte';
 	import { enhance } from '$app/forms';
 	import { success as toastSuccess, error as toastError } from '$lib/components/ui';
+	import { page } from '$app/state';
 
-	let { data } = $props();
-
-	let maintenanceMode = $state(data.config.maintenanceMode);
-	let registrationOpen = $state(data.config.registrationOpen);
-	let debugMode = $state(data.config.debugMode);
-	let sessionTimeout = $state(data.config.sessionTimeout);
-	let maxUploadSize = $state(data.config.maxUploadSize);
+	let maintenanceMode = $state(page.data.config.maintenanceMode);
+	let registrationOpen = $state(page.data.config.registrationOpen);
+	let debugMode = $state(page.data.config.debugMode);
+	let sessionTimeout = $state(page.data.config.sessionTimeout);
+	let maxUploadSize = $state(page.data.config.maxUploadSize);
 	let isSaving = $state(false);
 
 	function handleSave() {

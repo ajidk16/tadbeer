@@ -7,17 +7,16 @@
 		Users,
 		Share2,
 		ArrowLeft,
-		CheckCircle2,
 		AlertCircle
 	} from 'lucide-svelte';
 	import { Badge, Toast, success as toastSuccess, error as toastError } from '$lib/components/ui';
 	import { superForm } from 'sveltekit-superforms';
 	import { valibotClient } from 'sveltekit-superforms/adapters';
-	import { object, string, minLength, email, optional } from 'valibot';
+	import { object, string, minLength, email, optional, pipe } from 'valibot';
+	import { page } from '$app/state';
 
-	let { data } = $props();
-	const event = $derived(data.event);
-	const otherEvents = $derived(data.otherEvents);
+	const event = $derived(page.data.event);
+	const otherEvents = $derived(page.data.otherEvents);
 
 	const eventTypeConfig: Record<string, { label: string; variant: string }> = {
 		kajian: { label: 'Kajian', variant: 'primary' },
@@ -56,9 +55,9 @@
 	// But for now we rely on server schema via superform return
 	// actually we need to reconstruct validation schema if we use validators option in superForm
 	const registrationSchema = object({
-		name: string([minLength(3, 'Nama harus diisi minimal 3 karakter')]),
-		email: optional(string([email('Email tidak valid')])),
-		phone: string([minLength(10, 'Nomor WhatsApp tidak valid')]),
+		name: pipe(string(), minLength(3, 'Nama harus diisi minimal 3 karakter')),
+		email: optional(pipe(string(), email('Email tidak valid'))),
+		phone: pipe(string(), minLength(10, 'Nomor WhatsApp tidak valid')),
 		notes: optional(string())
 	});
 
@@ -69,7 +68,7 @@
 		enhance: superEnhance,
 		delayed,
 		message
-	} = superForm(data.form, {
+	} = superForm(page.data.form, {
 		validators: valibotClient(registrationSchema),
 		onResult: ({ result }) => {
 			if (result.type === 'success') {
@@ -98,7 +97,7 @@
 		{:else}
 			<!-- Pattern Background fallback -->
 			<div
-				class="absolute inset-0 bg-gradient-to-br from-primary/80 to-secondary/80 flex items-center justify-center"
+				class="absolute inset-0 bg-linear-to-br from-primary/80 to-secondary/80 flex items-center justify-center"
 			>
 				<Calendar class="w-32 h-32 text-white/20" />
 			</div>
