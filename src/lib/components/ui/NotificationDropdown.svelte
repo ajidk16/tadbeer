@@ -2,7 +2,7 @@
 	import { Bell, Check, X } from 'lucide-svelte';
 
 	interface Notification {
-		id: string;
+		id: string | number;
 		title: string;
 		message: string;
 		type: 'info' | 'success' | 'warning' | 'error';
@@ -12,9 +12,9 @@
 
 	interface Props {
 		notifications?: Notification[];
-		onMarkAsRead?: (id: string) => void;
+		onMarkAsRead?: (id: string | number) => void;
 		onMarkAllAsRead?: () => void;
-		onDismiss?: (id: string) => void;
+		onDismiss?: (id: string | number) => void;
 	}
 
 	let { notifications = [], onMarkAsRead, onMarkAllAsRead, onDismiss }: Props = $props();
@@ -123,7 +123,7 @@
 										<button
 											type="button"
 											class="btn btn-ghost btn-xs btn-circle opacity-0 group-hover:opacity-100"
-											onclick={() => handleDismiss(notification.id)}
+											onclick={() => handleDismiss(String(notification.id))}
 											aria-label="Hapus notifikasi"
 										>
 											<X class="w-3 h-3" />
@@ -138,7 +138,7 @@
 											<button
 												type="button"
 												class="text-xs text-primary hover:underline"
-												onclick={() => handleMarkAsRead(notification.id)}
+												onclick={() => handleMarkAsRead(String(notification.id))}
 											>
 												Tandai dibaca
 											</button>
@@ -153,7 +153,7 @@
 
 			<!-- Footer -->
 			<div class="p-2 border-t border-base-300 sticky bottom-0 bg-base-100">
-				<a href="/notifications" class="btn btn-ghost btn-sm btn-block"> Lihat semua notifikasi </a>
+				<a href="/admin/notifications" class="btn btn-ghost btn-sm btn-block"> Lihat semua notifikasi </a>
 			</div>
 		</div>
 	{/if}

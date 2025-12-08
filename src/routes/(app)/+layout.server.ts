@@ -1,4 +1,7 @@
 import type { LayoutServerLoad } from './$types';
+import { db } from '$lib/server/db';
+import { notification } from '$lib/server/db/schema';
+import { desc, eq } from 'drizzle-orm';
 
 export const load: LayoutServerLoad = async ({ locals }) => {
 	// Get user from session (populated by hooks.server.ts)
@@ -14,7 +17,19 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 				avatar: null
 			};
 
+	let notifications: any[] = [];
+	if (locals.user?.id) {
+		// Fetch notifications for logged in user
+		notifications = await db
+			.select()
+			.from(notification)
+			.where(eq(notification.userId, locals.user.id))
+			.orderBy(desc(notification.createdAt))
+			.limit(10);
+	}
+
 	return {
-		user
+		user,
+		notifications
 	};
 };

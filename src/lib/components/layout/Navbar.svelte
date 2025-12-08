@@ -3,6 +3,9 @@
 	import { NotificationDropdown } from '$lib/components/ui';
 	import { Menu, Search, LogOut, User, Settings } from 'lucide-svelte';
 
+	import { page } from '$app/state';
+	import { invalidateAll } from '$app/navigation';
+
 	interface Props {
 		toggleSidebar?: () => void;
 		user?: {
@@ -14,43 +17,53 @@
 
 	let { toggleSidebar, user = { name: 'Admin', role: 'admin' } }: Props = $props();
 
-	// Mock notifications - in real app, fetch from server
-	const notifications = $state([
-		{
-			id: '1',
-			title: 'Donasi Baru',
-			message: 'Rp 500.000 dari Hamba Allah',
-			type: 'success' as const,
-			isRead: false,
-			createdAt: new Date(Date.now() - 5 * 60 * 1000)
-		},
-		{
-			id: '2',
-			title: 'Kegiatan Mendatang',
-			message: 'Pengajian Rutin besok jam 08:00',
-			type: 'info' as const,
-			isRead: false,
-			createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000)
-		},
-		{
-			id: '3',
-			title: 'Laporan Keuangan',
-			message: 'Laporan November telah dibuat',
-			type: 'info' as const,
-			isRead: true,
-			createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000)
-		}
-	]);
+	// Use derived state to react to page data changes
+	let notifications = $derived(
+		page.data.notifications?.map((n: any) => ({
+			...n,
+			isRead: n.read // Map DB 'read' to UI 'isRead'
+		})) || []
+	);
 
-	function handleMarkAsRead(id: string) {
-		const notification = notifications.find((n) => n.id === id);
-		if (notification) {
-			notification.isRead = true;
+	async function handleMarkAsRead(id: string) {
+		try {
+			const formData = new FormData();
+			formData.append('id', id);
+			await fetch('/admin/notifications?/markRead', {
+				method: 'POST',
+				body: formData
+			});
+			invalidateAll();
+		} catch (error) {
+			console.error('Failed to mark as read', error);
 		}
 	}
 
-	function handleMarkAllAsRead() {
-		notifications.forEach((n) => (n.isRead = true));
+	async function handleMarkAllAsRead() {
+		try {
+			const formData = new FormData();
+			await fetch('/admin/notifications?/markAllRead', {
+				method: 'POST',
+				body: formData
+			});
+			invalidateAll();
+		} catch (error) {
+			console.error('Failed to mark all as read', error);
+		}
+	}
+
+	async function handleDismiss(id: string | number) {
+		try {
+			const formData = new FormData();
+			formData.append('id', String(id));
+			await fetch('/admin/notifications?/delete', {
+				method: 'POST',
+				body: formData
+			});
+			invalidateAll();
+		} catch (error) {
+			console.error('Failed to dismiss notification', error);
+		}
 	}
 
 	// Get initials for avatar
@@ -122,6 +135,7 @@
 			{notifications}
 			onMarkAsRead={handleMarkAsRead}
 			onMarkAllAsRead={handleMarkAllAsRead}
+			onDismiss={handleDismiss}
 		/>
 
 		<!-- Theme Toggle -->
