@@ -141,7 +141,7 @@ export type EventSchema = typeof eventSchema;
 export const memberSchema = v.object({
 	id: v.optional(v.number()),
 	name: v.pipe(v.string(), v.minLength(3, 'Nama harus diisi minimal 3 karakter')),
-	nik: v.optional(v.string()),
+	nik: v.optional(v.pipe(v.string(), v.maxLength(16, 'NIK maksimal 16 karakter'))),
 	gender: v.pipe(v.string(), v.minLength(1, 'Pilih jenis kelamin')),
 	birthDate: v.optional(v.string()), // Accept string from date input
 	phone: v.optional(v.string()),

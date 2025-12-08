@@ -10,6 +10,7 @@ import {
 	decimal,
 	jsonb
 } from 'drizzle-orm/pg-core';
+import { email } from 'valibot';
 
 // --- Enums ---
 export const roleEnum = pgEnum('role', ['super_admin', 'admin', 'imam', 'bendahara', 'jamaah']);
@@ -195,9 +196,12 @@ export const member = pgTable('member', {
 	id: serial('id').primaryKey(),
 	userId: text('user_id').references(() => user.id), // Optional link to system user
 	fullName: text('full_name').notNull(),
+	email: text('email').notNull(), // Add email column
 	nik: text('nik').unique(),
 	phone: text('phone'),
 	address: text('address'),
+	gender: text('gender').default('male'), // Add gender column
+	imageUrl: text('image_url'),
 	birthDate: date('birth_date'),
 	joinDate: date('join_date').defaultNow(),
 	status: text('status').default('active'), // active, inactive, moved, deceased

@@ -1,69 +1,127 @@
 import type { Actions, PageServerLoad } from './$types';
-import { fail, redirect } from '@sveltejs/kit';
+import { error, fail, redirect } from '@sveltejs/kit';
+import { superValidate } from 'sveltekit-superforms';
+import { valibot } from 'sveltekit-superforms/adapters';
+import { memberSchema } from '$lib/schemas';
+import { db } from '$lib/server/db';
+import { member } from '$lib/server/db/schema';
+import { eq } from 'drizzle-orm';
+import { uploadImageFromBuffer, deleteImage, getPublicIdFromUrl } from '$lib/server/cloudinary';
 
 export const load: PageServerLoad = async ({ params }) => {
-	const { id } = params;
+	const id = Number(params.id);
+	if (isNaN(id)) throw error(404, 'Jamaah tidak ditemukan');
 
-	// Mock data - replace with database query
-	const member = {
-		id,
-		name: 'Ahmad Sudrajat',
-		nik: '3201234567890001',
-		gender: 'male',
-		birthDate: '1985-03-15',
-		phone: '08123456789',
-		email: 'ahmad.s@email.com',
-		address: 'Jl. Masjid No. 123, RT 01/RW 02',
-		status: 'active',
-		avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Ahmad'
-	};
+	const data = await db.query.member.findFirst({
+		where: eq(member.id, id)
+	});
 
-	return { member };
+	if (!data) throw error(404, 'Jamaah tidak ditemukan');
+
+	const form = await superValidate(
+		{
+			id: data.id,
+			name: data.fullName,
+			nik: data.nik || '',
+			gender: data.gender || 'male',
+			birthDate: data.birthDate ? data.birthDate : '',
+			phone: data.phone || '',
+			email: data.email || '',
+			address: data.address || '',
+			status: data.status || 'active'
+		},
+		valibot(memberSchema)
+	);
+
+	return { form, member: data };
 };
 
 export const actions: Actions = {
 	update: async ({ request, params }) => {
+		const id = Number(params.id);
+		if (isNaN(id)) return fail(400, { message: 'Invalid ID' });
+
 		const formData = await request.formData();
+		const form = await superValidate(formData, valibot(memberSchema));
 
-		const name = formData.get('name') as string;
-		const nik = formData.get('nik') as string;
-		const gender = formData.get('gender') as string;
-		const birthDate = formData.get('birthDate') as string;
-		const phone = formData.get('phone') as string;
-		const email = formData.get('email') as string;
-		const address = formData.get('address') as string;
-		const status = formData.get('status') as string;
-		const avatar = formData.get('avatar') as File;
-
-		if (!name || !gender) {
-			return fail(400, { error: 'Nama dan jenis kelamin wajib diisi' });
+		if (!form.valid) {
+			return fail(400, { form });
 		}
 
-		// TODO: Upload avatar if exists
-		if (avatar && avatar.size > 0) {
-			console.log('Uploading avatar:', avatar.name, avatar.size);
-		}
-
-		// TODO: Update in database
-		console.log('Updating member:', {
-			id: params.id,
-			name,
-			nik,
-			gender,
-			birthDate,
-			phone,
-			email,
-			address,
-			status
+		// Get existing member to check for old avatar
+		const existingMember = await db.query.member.findFirst({
+			where: eq(member.id, id)
 		});
 
-		throw redirect(303, '/jamaah');
+		if (!existingMember) return fail(404, { message: 'Member not found' });
+
+		let imageUrl = existingMember.imageUrl;
+		const avatarFile = formData.get('avatar') as File;
+
+		if (avatarFile && avatarFile.size > 0 && avatarFile.name !== 'undefined') {
+			try {
+				const buffer = Buffer.from(await avatarFile.arrayBuffer());
+				const uploadResult = await uploadImageFromBuffer(buffer, 'minimasjid/members');
+				if (uploadResult?.secure_url) {
+					// Delete old avatar if exists and it's a cloudinary url
+					// Note: Check if existingMember.imageUrl exists and is cloudinary before delete?
+					// The utility deleteImage handles publicId.
+					// I need a way to extract publicId. `getPublicIdFromUrl` is imported.
+					if (imageUrl) {
+						const publicId = getPublicIdFromUrl(imageUrl);
+						if (publicId) await deleteImage(publicId);
+					}
+					imageUrl = uploadResult.secure_url;
+				}
+			} catch (error) {
+				console.error('Failed to upload avatar:', error);
+			}
+		}
+
+		try {
+			await db
+				.update(member)
+				.set({
+					fullName: form.data.name,
+					nik: form.data.nik || null,
+					gender: form.data.gender,
+					birthDate: form.data.birthDate ? form.data.birthDate : null,
+					phone: form.data.phone || null,
+					email: form.data.email || null,
+					address: form.data.address || null,
+					status: form.data.status || 'active',
+					imageUrl: imageUrl,
+					updatedAt: new Date()
+				})
+				.where(eq(member.id, id));
+		} catch (err) {
+			console.error(err);
+			return fail(500, { form, message: 'Gagal mengupdate data' });
+		}
+
+		throw redirect(303, '/admin/jamaah');
 	},
 
 	delete: async ({ params }) => {
-		// TODO: Delete from database
-		console.log('Deleting member:', params.id);
+		const id = Number(params.id);
+		if (isNaN(id)) return fail(400, { message: 'Invalid ID' });
 
-		throw redirect(303, '/jamaah');
+		try {
+			// Optional: Delete image from cloudinary if exists
+			const existingMember = await db.query.member.findFirst({
+				where: eq(member.id, id)
+			});
+			if (existingMember?.imageUrl) {
+				const publicId = getPublicIdFromUrl(existingMember.imageUrl);
+				if (publicId) await deleteImage(publicId);
+			}
+
+			await db.delete(member).where(eq(member.id, id));
+		} catch (err) {
+			console.error(err);
+			return fail(500, { message: 'Gagal menghapus data' });
+		}
+
+		throw redirect(303, '/admin/jamaah');
 	}
 };
