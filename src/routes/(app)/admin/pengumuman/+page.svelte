@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { enhance } from '$app/forms';
+	import { superForm } from 'sveltekit-superforms';
 	import { Badge, Toast, success as toastSuccess, error as toastError } from '$lib/components/ui';
 	import {
 		Plus,
@@ -17,6 +17,39 @@
 
 	let { data } = $props();
 
+	// Initialize Superforms
+	const {
+		form: announcementFormData,
+		errors: announcementErrors,
+		enhance: announcementEnhance,
+		submitting: announcementSubmitting
+	} = superForm(data.announcementForm, {
+		onResult: ({ result}) => {
+			if (result.type === 'success') {
+				toastSuccess(result.data?.message || 'Berhasil disimpan');
+				showAnnouncementModal = false;
+			} else if (result.type === 'failure') {
+				toastError(result.data?.message || 'Gagal menyimpan');
+			}
+		}
+	});
+
+	const {
+		form: khutbahFormData,
+		errors: khutbahErrors,
+		enhance: khutbahEnhance,
+		submitting: khutbahSubmitting
+	} = superForm(data.khutbahForm, {
+		onResult: ({ result}) => {
+			if (result.type === 'success') {
+				toastSuccess(result.data?.message || 'Berhasil disimpan');
+				showKhutbahModal = false;
+			} else if (result.type === 'failure') {
+				toastError(result.data?.message || 'Gagal menyimpan');
+			}
+		}
+	});
+
 	// View state
 	let activeTab = $state('announcements'); // announcements, khutbah, broadcast
 
@@ -26,18 +59,6 @@
 	let showDeleteModal = $state(false);
 	let selectedItem = $state<any>(null);
 	let isEditMode = $state(false);
-	let isSubmitting = $state(false);
-
-	// Form states
-	let formTitle = $state('');
-	let formContent = $state('');
-	let formType = $state('info');
-
-	let formDate = $state('');
-	let formKhatib = $state('');
-	let formImam = $state('');
-	let formMuadzin = $state('');
-	let formTheme = $state('');
 
 	function formatDate(dateStr: string) {
 		return new Date(dateStr).toLocaleDateString('id-ID', {
@@ -58,40 +79,51 @@
 	function openAnnouncementModal() {
 		selectedItem = null;
 		isEditMode = false;
-		formTitle = '';
-		formContent = '';
-		formType = 'info';
+		$announcementFormData = {
+			title: '',
+			content: '',
+			type: 'info'
+		};
 		showAnnouncementModal = true;
 	}
 
 	function openEditAnnouncement(item: any) {
 		selectedItem = item;
 		isEditMode = true;
-		formTitle = item.title;
-		formContent = item.content;
-		formType = item.type;
+		$announcementFormData = {
+			id: item.id,
+			title: item.title,
+			content: item.content,
+			type: item.priority || item.type || 'info', // Map priority to type
+			imageUrl: item.imageUrl
+		};
 		showAnnouncementModal = true;
 	}
 
 	function openKhutbahModal() {
 		selectedItem = null;
 		isEditMode = false;
-		formDate = '';
-		formKhatib = '';
-		formImam = '';
-		formMuadzin = '';
-		formTheme = '';
+		$khutbahFormData = {
+			date: '',
+			khatib: '',
+			imam: '',
+			muadzin: '',
+			theme: ''
+		};
 		showKhutbahModal = true;
 	}
 
 	function openEditKhutbah(item: any) {
 		selectedItem = item;
 		isEditMode = true;
-		formDate = item.date;
-		formKhatib = item.khatib;
-		formImam = item.imam;
-		formMuadzin = item.muadzin;
-		formTheme = item.theme;
+		$khutbahFormData = {
+			id: item.id,
+			date: item.date,
+			khatib: item.khatib,
+			imam: item.imam,
+			muadzin: item.muadzin,
+			theme: item.theme
+		};
 		showKhutbahModal = true;
 	}
 
@@ -100,31 +132,24 @@
 		showDeleteModal = true;
 	}
 
-	function handleSubmit() {
-		return async ({ result, update }: any) => {
-			isSubmitting = false;
+	// Delete logic is simpler without superform for now, or just use standard enhance
+	import { enhance } from '$app/forms';
+	import { page } from '$app/state';
+
+	function handleDelete() {
+		return async ({ result}: any) => {
+			showDeleteModal = false;
 			if (result.type === 'success') {
-				toastSuccess(result.data?.message || 'Berhasil disimpan');
-				showAnnouncementModal = false;
-				showKhutbahModal = false;
-				await update();
+				toastSuccess(result.data?.message || 'Data berhasil dihapus');
 			} else {
-				toastError('Gagal menyimpan');
+				toastError(result.data?.message || 'Gagal menghapus');
 			}
 		};
 	}
 
-	function handleDelete() {
-		return async ({ result, update }: any) => {
-			showDeleteModal = false;
-			if (result.type === 'success') {
-				toastSuccess('Data berhasil dihapus');
-				await update();
-			} else {
-				toastError('Gagal menghapus');
-			}
-		};
-	}
+	const announcement = $derived(page.data.announcements);
+	const khutbah = $derived(page.data.khutbahSchedule);
+	const broadcast = $derived(page.data.broadcastHistory);
 </script>
 
 <svelte:head>
@@ -176,9 +201,9 @@
 			</div>
 
 			<div class="grid gap-4">
-				{#each data.announcements as item}
+				{#each announcement as item}
 					<div
-						class="card bg-base-100 shadow-sm border-l-4 {item.type === 'urgent'
+						class="card bg-base-100 shadow-sm border-l-4 {(item.priority || item.type) === 'urgent'
 							? 'border-error'
 							: 'border-info'}"
 					>
@@ -187,7 +212,7 @@
 								<div>
 									<div class="flex items-center gap-2 mb-1">
 										<h3 class="font-bold text-lg">{item.title}</h3>
-										{#if item.type === 'urgent'}
+										{#if (item.priority || item.type) === 'urgent'}
 											<Badge variant="error" size="sm">Penting</Badge>
 										{/if}
 									</div>
@@ -214,6 +239,9 @@
 						</div>
 					</div>
 				{/each}
+				{#if data.announcements.length === 0}
+					<div class="text-center py-8 text-base-content/50">Belum ada pengumuman</div>
+				{/if}
 			</div>
 		</div>
 	{:else if activeTab === 'khutbah'}
@@ -238,7 +266,7 @@
 								</tr>
 							</thead>
 							<tbody>
-								{#each data.khutbahSchedule as item}
+								{#each khutbah as item}
 									<tr class="hover:bg-base-200/50">
 										<td class="font-medium">
 											<div class="flex items-center gap-2">
@@ -251,7 +279,13 @@
 											<div class="text-xs text-base-content/50">Imam: {item.imam}</div>
 										</td>
 										<td>{item.muadzin}</td>
-										<td><Badge variant="ghost" size="sm">{item.theme}</Badge></td>
+										<td>
+											{#if item.theme}
+												<Badge variant="ghost" size="sm">{item.theme}</Badge>
+											{:else}
+												-
+											{/if}
+										</td>
 										<td>
 											<div class="flex justify-center gap-1">
 												<button
@@ -270,6 +304,13 @@
 										</td>
 									</tr>
 								{/each}
+								{#if khutbah.length === 0}
+									<tr>
+										<td colspan="5" class="text-center py-8 text-base-content/50"
+											>Belum ada jadwal khutbah</td
+										>
+									</tr>
+								{/if}
 							</tbody>
 						</table>
 					</div>
@@ -292,7 +333,7 @@
 								</tr>
 							</thead>
 							<tbody>
-								{#each data.broadcastHistory as item}
+								{#each broadcast as item}
 									<tr class="hover:bg-base-200/50">
 										<td class="font-medium">{item.subject}</td>
 										<td>
@@ -309,6 +350,13 @@
 										</td>
 									</tr>
 								{/each}
+								{#if broadcast.length === 0}
+									<tr>
+										<td colspan="5" class="text-center py-8 text-base-content/50"
+											>Belum ada history broadcast</td
+										>
+									</tr>
+								{/if}
 							</tbody>
 						</table>
 					</div>
@@ -328,10 +376,10 @@
 			<form
 				method="POST"
 				action={isEditMode ? '?/updateAnnouncement' : '?/createAnnouncement'}
-				use:enhance={handleSubmit}
+				use:announcementEnhance
 			>
-				{#if isEditMode}
-					<input type="hidden" name="id" value={selectedItem?.id} />
+				{#if $announcementFormData.id}
+					<input type="hidden" name="id" value={$announcementFormData.id} />
 				{/if}
 				<div class="space-y-4">
 					<div class="form-control">
@@ -340,16 +388,26 @@
 							type="text"
 							name="title"
 							class="input input-bordered w-full"
-							bind:value={formTitle}
-							required
+							bind:value={$announcementFormData.title}
+							placeholder="Masukkan judul pengumuman"
 						/>
+						{#if $announcementErrors.title}
+							<span class="text-error text-xs mt-1">{$announcementErrors.title}</span>
+						{/if}
 					</div>
 					<div class="form-control">
 						<label for="type" class="label"><span class="label-text">Tipe</span></label>
-						<select name="type" class="select select-bordered w-full" bind:value={formType}>
+						<select
+							name="type"
+							class="select select-bordered w-full"
+							bind:value={$announcementFormData.type}
+						>
 							<option value="info">Info Biasa</option>
 							<option value="urgent">Penting / Mendesak</option>
 						</select>
+						{#if $announcementErrors.type}
+							<span class="text-error text-xs mt-1">{$announcementErrors.type}</span>
+						{/if}
 					</div>
 					<div class="form-control">
 						<label for="content" class="label"><span class="label-text">Isi Pengumuman</span></label
@@ -357,9 +415,12 @@
 						<textarea
 							name="content"
 							class="textarea textarea-bordered h-24 w-full"
-							bind:value={formContent}
-							required
+							bind:value={$announcementFormData.content}
+							placeholder="Tulis detail pengumuman..."
 						></textarea>
+						{#if $announcementErrors.content}
+							<span class="text-error text-xs mt-1">{$announcementErrors.content}</span>
+						{/if}
 					</div>
 				</div>
 				<div class="modal-action">
@@ -368,10 +429,9 @@
 						class="btn btn-ghost"
 						onclick={() => (showAnnouncementModal = false)}>Batal</button
 					>
-					<button type="submit" class="btn btn-primary" disabled={isSubmitting}>
-						{#if isSubmitting}<span class="loading loading-spinner loading-sm"></span>{:else}<Save
-								class="w-4 h-4"
-							/>{/if}
+					<button type="submit" class="btn btn-primary" disabled={$announcementSubmitting}>
+						{#if $announcementSubmitting}<span class="loading loading-spinner loading-sm"
+							></span>{:else}<Save class="w-4 h-4" />{/if}
 						Simpan
 					</button>
 				</div>
@@ -390,10 +450,10 @@
 			<form
 				method="POST"
 				action={isEditMode ? '?/updateKhutbah' : '?/createKhutbah'}
-				use:enhance={handleSubmit}
+				use:khutbahEnhance
 			>
-				{#if isEditMode}
-					<input type="hidden" name="id" value={selectedItem?.id} />
+				{#if $khutbahFormData.id}
+					<input type="hidden" name="id" value={$khutbahFormData.id} />
 				{/if}
 				<div class="space-y-4">
 					<div class="form-control">
@@ -402,9 +462,11 @@
 							type="date"
 							name="date"
 							class="input input-bordered w-full"
-							bind:value={formDate}
-							required
+							bind:value={$khutbahFormData.date}
 						/>
+						{#if $khutbahErrors.date}
+							<span class="text-error text-xs mt-1">{$khutbahErrors.date}</span>
+						{/if}
 					</div>
 					<div class="grid grid-cols-2 gap-4">
 						<div class="form-control">
@@ -413,9 +475,12 @@
 								type="text"
 								name="khatib"
 								class="input input-bordered w-full"
-								bind:value={formKhatib}
-								required
+								bind:value={$khutbahFormData.khatib}
+								placeholder="Nama Khatib"
 							/>
+							{#if $khutbahErrors.khatib}
+								<span class="text-error text-xs mt-1">{$khutbahErrors.khatib}</span>
+							{/if}
 						</div>
 						<div class="form-control">
 							<label for="imam" class="label"><span class="label-text">Imam</span></label>
@@ -423,9 +488,12 @@
 								type="text"
 								name="imam"
 								class="input input-bordered w-full"
-								bind:value={formImam}
-								required
+								bind:value={$khutbahFormData.imam}
+								placeholder="Nama Imam"
 							/>
+							{#if $khutbahErrors.imam}
+								<span class="text-error text-xs mt-1">{$khutbahErrors.imam}</span>
+							{/if}
 						</div>
 					</div>
 					<div class="form-control">
@@ -434,8 +502,12 @@
 							type="text"
 							name="muadzin"
 							class="input input-bordered w-full"
-							bind:value={formMuadzin}
+							bind:value={$khutbahFormData.muadzin}
+							placeholder="Nama Muadzin (Opsional)"
 						/>
+						{#if $khutbahErrors.muadzin}
+							<span class="text-error text-xs mt-1">{$khutbahErrors.muadzin}</span>
+						{/if}
 					</div>
 					<div class="form-control">
 						<label for="theme" class="label"><span class="label-text">Tema Khutbah</span></label>
@@ -443,18 +515,21 @@
 							type="text"
 							name="theme"
 							class="input input-bordered w-full"
-							bind:value={formTheme}
+							bind:value={$khutbahFormData.theme}
+							placeholder="Tema Khutbah (Opsional)"
 						/>
+						{#if $khutbahErrors.theme}
+							<span class="text-error text-xs mt-1">{$khutbahErrors.theme}</span>
+						{/if}
 					</div>
 				</div>
 				<div class="modal-action">
 					<button type="button" class="btn btn-ghost" onclick={() => (showKhutbahModal = false)}
 						>Batal</button
 					>
-					<button type="submit" class="btn btn-primary" disabled={isSubmitting}>
-						{#if isSubmitting}<span class="loading loading-spinner loading-sm"></span>{:else}<Save
-								class="w-4 h-4"
-							/>{/if}
+					<button type="submit" class="btn btn-primary" disabled={$khutbahSubmitting}>
+						{#if $khutbahSubmitting}<span class="loading loading-spinner loading-sm"
+							></span>{:else}<Save class="w-4 h-4" />{/if}
 						Simpan
 					</button>
 				</div>
@@ -471,7 +546,11 @@
 			<p class="py-4">Apakah Anda yakin ingin menghapus data ini?</p>
 			<div class="modal-action">
 				<button class="btn btn-ghost" onclick={() => (showDeleteModal = false)}>Batal</button>
-				<form method="POST" action="?/delete" use:enhance={handleDelete}>
+				<form
+					method="POST"
+					action={activeTab === 'announcements' ? '?/deleteAnnouncement' : '?/deleteKhutbah'}
+					use:enhance={handleDelete}
+				>
 					<input type="hidden" name="id" value={selectedItem?.id} />
 					<button type="submit" class="btn btn-error"><Trash2 class="w-4 h-4" /> Hapus</button>
 				</form>

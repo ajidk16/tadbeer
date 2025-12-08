@@ -104,9 +104,9 @@
 		isEditMode = false;
 		// Reset form
 		$form.id = undefined;
-		$form.title = 'bantuan korban banjir sumatra';
-		// $form.target = 0;
-		formTargetFormatted = new Intl.NumberFormat('id-ID').format(10000000000);
+		$form.title = '';
+
+		formTargetFormatted = new Intl.NumberFormat('id-ID').format(0);
 		$form.deadline = '';
 		$form.description = '';
 		showCampaignModal = true;

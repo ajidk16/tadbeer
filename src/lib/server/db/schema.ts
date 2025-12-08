@@ -302,6 +302,7 @@ export const announcement = pgTable('announcement', {
 	title: text('title').notNull(),
 	content: text('content').notNull(),
 	category: announcementCategoryEnum('category').notNull(),
+	priority: text('priority').default('info').notNull(), // info, urgent
 	authorId: text('author_id').references(() => user.id),
 	isPublished: boolean('is_published').default(false).notNull(),
 	publishedAt: timestamp('published_at'),
@@ -381,4 +382,25 @@ export const assetMaintenance = pgTable('asset_maintenance', {
 	notes: text('notes'),
 	createdAt: timestamp('created_at').defaultNow().notNull(),
 	updatedAt: timestamp('updated_at').defaultNow().notNull()
+});
+
+export const khutbahSchedule = pgTable('khutbah_schedule', {
+	id: serial('id').primaryKey(),
+	date: date('date').notNull(),
+	khatib: text('khatib').notNull(),
+	imam: text('imam').notNull(),
+	muadzin: text('muadzin'),
+	theme: text('theme'),
+	createdAt: timestamp('created_at').defaultNow().notNull(),
+	updatedAt: timestamp('updated_at').defaultNow().notNull()
+});
+
+export const broadcastLog = pgTable('broadcast_log', {
+	id: serial('id').primaryKey(),
+	subject: text('subject').notNull(),
+	channel: text('channel').notNull(), // whatsapp, email
+	recipientCount: integer('recipient_count').default(0).notNull(),
+	sentAt: timestamp('sent_at').defaultNow().notNull(),
+	status: text('status').default('sent').notNull(), // sent, failed
+	createdAt: timestamp('created_at').defaultNow().notNull()
 });

@@ -212,3 +212,24 @@ export const maintenanceSchema = v.object({
 });
 
 export type MaintenanceSchema = typeof maintenanceSchema;
+
+export const announcementSchema = v.object({
+	id: v.optional(v.number()),
+	title: v.pipe(v.string(), v.minLength(3, 'Judul wajib diisi minimal 3 karakter')),
+	content: v.pipe(v.string(), v.minLength(10, 'Konten wajib diisi minimal 10 karakter')),
+	type: v.pipe(v.string(), v.minLength(1, 'Tipe wajib dipilih')), // info, urgent
+	imageUrl: v.optional(v.string())
+});
+
+export type AnnouncementSchema = typeof announcementSchema;
+
+export const khutbahSchema = v.object({
+	id: v.optional(v.number()),
+	date: v.pipe(v.string(), v.minLength(1, 'Tanggal wajib diisi')),
+	khatib: v.pipe(v.string(), v.minLength(3, 'Nama Khatib wajib diisi')),
+	imam: v.pipe(v.string(), v.minLength(3, 'Nama Imam wajib diisi')),
+	muadzin: v.optional(v.string()),
+	theme: v.optional(v.string())
+});
+
+export type KhutbahSchema = typeof khutbahSchema;
