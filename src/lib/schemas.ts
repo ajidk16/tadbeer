@@ -172,3 +172,43 @@ export const deleteCampaignSchema = v.object({
 });
 
 export type DeleteCampaignSchema = typeof deleteCampaignSchema;
+
+export const inventorySchema = v.object({
+	id: v.optional(v.number()),
+	name: v.pipe(v.string(), v.minLength(3, 'Nama aset wajib diisi minimal 3 karakter')),
+	code: v.optional(v.string()),
+	category: v.pipe(v.string(), v.minLength(1, 'Kategori wajib dipilih')),
+	quantity: v.pipe(v.number('Jumlah harus angka'), v.minValue(1, 'Minimal 1unit')),
+	condition: v.pipe(v.string(), v.minLength(1, 'Kondisi wajib dipilih')),
+	location: v.optional(v.string()),
+	purchaseDate: v.optional(v.string()),
+	price: v.optional(v.number()),
+	description: v.optional(v.string())
+});
+
+export type InventorySchema = typeof inventorySchema;
+
+export const lendingSchema = v.object({
+	id: v.optional(v.number()),
+	assetId: v.pipe(v.number('Pilih aset'), v.minValue(1, 'Pilih aset yang valid')),
+	borrowerName: v.pipe(v.string(), v.minLength(3, 'Nama peminjam wajib diisi')),
+	borrowerContact: v.optional(v.string()),
+	borrowDate: v.optional(v.string()), // form input date
+	returnDate: v.optional(v.string()), // form input date (planning)
+	notes: v.optional(v.string())
+});
+
+export type LendingSchema = typeof lendingSchema;
+
+export const maintenanceSchema = v.object({
+	id: v.optional(v.number()),
+	assetId: v.pipe(v.number('Pilih aset'), v.minValue(1, 'Pilih aset yang valid')),
+	maintenanceDate: v.pipe(v.string(), v.minLength(1, 'Tanggal wajib diisi')),
+	description: v.pipe(v.string(), v.minLength(3, 'Deskripsi wajib diisi')),
+	cost: v.optional(v.number()),
+	performer: v.optional(v.string()),
+	status: v.optional(v.string()), // scheduled, in_progress, completed, cancelled
+	notes: v.optional(v.string())
+});
+
+export type MaintenanceSchema = typeof maintenanceSchema;

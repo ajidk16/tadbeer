@@ -1,15 +1,22 @@
 <script lang="ts">
-	import { enhance } from '$app/forms';
+	import { superForm } from 'sveltekit-superforms';
 	import { goto } from '$app/navigation';
-	import Toast, {
-		success as toastSuccess,
-		error as toastError
-	} from '$lib/components/ui/Toast.svelte';
 	import { ArrowLeft, Save, Camera, Upload, X, Image as ImageIcon } from 'lucide-svelte';
+	import { Toast, success as toastSuccess, error as toastError } from '$lib/components/ui';
 
-	let { form } = $props();
+	let { data } = $props();
 
-	let isSubmitting = $state(false);
+	const { form, errors, constraints, enhance, delayed } = superForm(data.form, {
+		onResult: ({ result }) => {
+			if (result.type === 'redirect') {
+				toastSuccess('Aset berhasil ditambahkan');
+				goto(result.location);
+			} else if (result.type === 'failure') {
+				toastError(result.data?.message || 'Gagal menyimpan aset');
+			}
+		}
+	});
+
 	let imagePreview = $state<string | null>(null);
 	let imageInput: HTMLInputElement;
 
@@ -23,20 +30,6 @@
 			};
 			reader.readAsDataURL(file);
 		}
-	}
-
-	function handleSubmit() {
-		return async ({ result, update }: any) => {
-			isSubmitting = false;
-			if (result.type === 'redirect') {
-				toastSuccess('Aset berhasil ditambahkan');
-				goto(result.location);
-			} else if (result.type === 'failure') {
-				toastError(result.data?.error || 'Gagal menyimpan');
-			} else {
-				await update();
-			}
-		};
 	}
 </script>
 
@@ -59,19 +52,11 @@
 	</div>
 
 	<!-- Form -->
-	<form
-		method="POST"
-		enctype="multipart/form-data"
-		use:enhance={() => {
-			isSubmitting = true;
-			return handleSubmit();
-		}}
-		class="card bg-base-100 shadow-sm"
-	>
+	<form method="POST" enctype="multipart/form-data" use:enhance class="card bg-base-100 shadow-sm">
 		<div class="card-body space-y-6">
-			{#if form?.error}
+			{#if $errors._errors}
 				<div class="alert alert-error">
-					<span>{form.error}</span>
+					<span>{$errors._errors}</span>
 				</div>
 			{/if}
 
@@ -113,7 +98,11 @@
 								<button
 									type="button"
 									class="btn btn-sm btn-ghost text-error"
-									onclick={() => (imagePreview = null)}
+									onclick={() => {
+										imagePreview = null;
+										// Reset file input if needed
+										if (imageInput) imageInput.value = '';
+									}}
 								>
 									<X class="w-4 h-4" /> Hapus
 								</button>
@@ -140,10 +129,12 @@
 						<input
 							type="text"
 							name="name"
-							class="input input-bordered w-full"
+							class="input input-bordered w-full {$errors.name ? 'input-error' : ''}"
 							placeholder="Contoh: Sound System Yamaha"
-							required
+							bind:value={$form.name}
+							{...$constraints.name}
 						/>
+						{#if $errors.name}<span class="text-error text-sm mt-1">{$errors.name}</span>{/if}
 					</div>
 
 					<div class="form-control">
@@ -151,16 +142,24 @@
 						<input
 							type="text"
 							name="code"
-							class="input input-bordered w-full"
+							class="input input-bordered w-full {$errors.code ? 'input-error' : ''}"
 							placeholder="Auto-generated jika kosong"
+							bind:value={$form.code}
+							{...$constraints.code}
 						/>
+						{#if $errors.code}<span class="text-error text-sm mt-1">{$errors.code}</span>{/if}
 					</div>
 
 					<div class="form-control">
 						<label for="category" class="label"
 							><span class="label-text">Kategori <span class="text-error">*</span></span></label
 						>
-						<select name="category" class="select select-bordered w-full" required>
+						<select
+							name="category"
+							class="select select-bordered w-full {$errors.category ? 'select-error' : ''}"
+							bind:value={$form.category}
+							{...$constraints.category}
+						>
 							<option value="" disabled selected>Pilih Kategori</option>
 							<option value="Elektronik">Elektronik</option>
 							<option value="Furniture">Furniture</option>
@@ -168,6 +167,8 @@
 							<option value="Kendaraan">Kendaraan</option>
 							<option value="Lainnya">Lainnya</option>
 						</select>
+						{#if $errors.category}<span class="text-error text-sm mt-1">{$errors.category}</span
+							>{/if}
 					</div>
 				</div>
 
@@ -185,22 +186,31 @@
 							<input
 								type="number"
 								name="quantity"
-								class="input input-bordered w-full"
-								value="1"
+								class="input input-bordered w-full {$errors.quantity ? 'input-error' : ''}"
 								min="1"
-								required
+								bind:value={$form.quantity}
+								{...$constraints.quantity}
 							/>
+							{#if $errors.quantity}<span class="text-error text-sm mt-1">{$errors.quantity}</span
+								>{/if}
 						</div>
 						<div class="form-control">
 							<label for="condition" class="label"
 								><span class="label-text">Kondisi <span class="text-error">*</span></span></label
 							>
-							<select name="condition" class="select select-bordered w-full" required>
-								<option value="good" selected>Baik</option>
+							<select
+								name="condition"
+								class="select select-bordered w-full {$errors.condition ? 'select-error' : ''}"
+								bind:value={$form.condition}
+								{...$constraints.condition}
+							>
+								<option value="good">Baik</option>
 								<option value="maintenance">Perlu Perbaikan</option>
 								<option value="damaged">Rusak</option>
 								<option value="lost">Hilang</option>
 							</select>
+							{#if $errors.condition}<span class="text-error text-sm mt-1">{$errors.condition}</span
+								>{/if}
 						</div>
 					</div>
 
@@ -211,16 +221,29 @@
 						<input
 							type="text"
 							name="location"
-							class="input input-bordered w-full"
+							class="input input-bordered w-full {$errors.location ? 'input-error' : ''}"
 							placeholder="Contoh: Gudang Utama"
+							bind:value={$form.location}
+							{...$constraints.location}
 						/>
+						{#if $errors.location}<span class="text-error text-sm mt-1">{$errors.location}</span
+							>{/if}
 					</div>
 
 					<div class="form-control">
 						<label for="purchaseDate" class="label"
 							><span class="label-text">Tanggal Pembelian</span></label
 						>
-						<input type="date" name="purchaseDate" class="input input-bordered w-full" />
+						<input
+							type="date"
+							name="purchaseDate"
+							class="input input-bordered w-full {$errors.purchaseDate ? 'input-error' : ''}"
+							bind:value={$form.purchaseDate}
+							{...$constraints.purchaseDate}
+						/>
+						{#if $errors.purchaseDate}<span class="text-error text-sm mt-1"
+								>{$errors.purchaseDate}</span
+							>{/if}
 					</div>
 
 					<div class="form-control">
@@ -228,16 +251,21 @@
 						<div class="input-group">
 							<div class="flex">
 								<span
-									class="bg-base-200 px-3 py-2 border border-r-0 border-base-300 rounded-l-lg text-sm"
+									class="bg-base-200 px-3 py-2 border border-r-0 border-base-300 rounded-l-lg text-sm flex items-center"
 									>Rp</span
 								>
 								<input
 									type="number"
 									name="price"
-									class="input input-bordered w-full pl-2"
+									class="input input-bordered w-full rounded-l-none pl-2 {$errors.price
+										? 'input-error'
+										: ''}"
+									bind:value={$form.price}
+									{...$constraints.price}
 								/>
 							</div>
 						</div>
+						{#if $errors.price}<span class="text-error text-sm mt-1">{$errors.price}</span>{/if}
 					</div>
 				</div>
 			</div>
@@ -248,16 +276,22 @@
 				>
 				<textarea
 					name="description"
-					class="textarea textarea-bordered h-24 w-full"
+					class="textarea textarea-bordered h-24 w-full {$errors.description
+						? 'textarea-error'
+						: ''}"
 					placeholder="Deskripsi detail aset..."
+					bind:value={$form.description}
+					{...$constraints.description}
 				></textarea>
+				{#if $errors.description}<span class="text-error text-sm mt-1">{$errors.description}</span
+					>{/if}
 			</div>
 
 			<!-- Actions -->
 			<div class="flex justify-end gap-2 pt-4 border-t border-base-200">
 				<a href="/admin/inventaris" class="btn btn-ghost">Batal</a>
-				<button type="submit" class="btn btn-primary" disabled={isSubmitting}>
-					{#if isSubmitting}
+				<button type="submit" class="btn btn-primary" disabled={$delayed}>
+					{#if $delayed}
 						<span class="loading loading-spinner loading-sm"></span>
 					{:else}
 						<Save class="w-4 h-4" />

@@ -9,7 +9,10 @@ import {
 	donationCampaign,
 	announcement,
 	auditLog,
-	roles
+	roles,
+	inventoryItem,
+	assetLending,
+	assetMaintenance
 } from './schema';
 
 export const userRelations = relations(user, ({ many, one }) => ({
@@ -71,5 +74,28 @@ export const auditLogRelations = relations(auditLog, ({ one }) => ({
 	user: one(user, {
 		fields: [auditLog.userId],
 		references: [user.id]
+	})
+}));
+
+export const inventoryItemRelations = relations(inventoryItem, ({ many }) => ({
+	lendings: many(assetLending),
+	maintenanceLogs: many(assetMaintenance)
+}));
+
+export const assetLendingRelations = relations(assetLending, ({ one }) => ({
+	asset: one(inventoryItem, {
+		fields: [assetLending.assetId],
+		references: [inventoryItem.id]
+	}),
+	recordedBy: one(user, {
+		fields: [assetLending.recordedBy],
+		references: [user.id]
+	})
+}));
+
+export const assetMaintenanceRelations = relations(assetMaintenance, ({ one }) => ({
+	asset: one(inventoryItem, {
+		fields: [assetMaintenance.assetId],
+		references: [inventoryItem.id]
 	})
 }));

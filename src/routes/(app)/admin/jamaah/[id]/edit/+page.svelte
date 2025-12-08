@@ -96,7 +96,7 @@
 				<div class="flex items-center gap-4">
 					<div class="avatar {avatarPreview ? '' : 'placeholder'}">
 						{#if avatarPreview}
-							<div class="w-20 rounded-full">
+							<div class="w-20 rounded-full flex items-center justify-center overflow-hidden">
 								<img src={avatarPreview} alt="Preview" />
 							</div>
 						{:else}

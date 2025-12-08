@@ -1,139 +1,210 @@
 import type { Actions, PageServerLoad } from './$types';
-import { fail, redirect } from '@sveltejs/kit';
+import { fail } from '@sveltejs/kit';
+import { db } from '$lib/server/db';
+import { inventoryItem, assetLending, assetMaintenance } from '$lib/server/db/schema';
+import { eq, desc } from 'drizzle-orm';
+import { superValidate } from 'sveltekit-superforms';
+import { valibot } from 'sveltekit-superforms/adapters';
+import { lendingSchema, maintenanceSchema } from '$lib/schemas';
 
 export const load: PageServerLoad = async () => {
-	// Mock Assets
-	const assets = [
-		{
-			id: '1',
-			name: 'Sound System Yamaha',
-			code: 'INV-001',
-			category: 'Elektronik',
-			condition: 'good',
-			quantity: 1,
-			location: 'Ruang Utama',
-			purchaseDate: '2023-01-15',
-			price: 15000000,
-			image:
-				'https://images.unsplash.com/photo-1520166012956-add9ba0835ce?w=800&auto=format&fit=crop&q=60'
-		},
-		{
-			id: '2',
-			name: 'Karpet Sajadah Turki',
-			code: 'INV-002',
-			category: 'Perlengkapan',
-			condition: 'good',
-			quantity: 20,
-			location: 'Ruang Utama',
-			purchaseDate: '2022-05-10',
-			price: 2500000,
-			image:
-				'https://images.unsplash.com/photo-1584646098378-0874589d76e7?w=800&auto=format&fit=crop&q=60'
-		},
-		{
-			id: '3',
-			name: 'AC Daikin 2PK',
-			code: 'INV-003',
-			category: 'Elektronik',
-			condition: 'maintenance',
-			quantity: 4,
-			location: 'Ruang Utama',
-			purchaseDate: '2021-11-20',
-			price: 6000000,
-			image: null
-		},
-		{
-			id: '4',
-			name: 'Lemari Kitab Jati',
-			code: 'INV-004',
-			category: 'Furniture',
-			condition: 'good',
-			quantity: 2,
-			location: 'Perpustakaan',
-			purchaseDate: '2020-08-15',
-			price: 3500000,
-			image: null
-		},
-		{
-			id: '5',
-			name: 'Proyektor Epson',
-			code: 'INV-005',
-			category: 'Elektronik',
-			condition: 'damaged',
-			quantity: 1,
-			location: 'Gudang',
-			purchaseDate: '2019-03-10',
-			price: 5000000,
-			image: null
-		}
-	];
+	const assets = await db.query.inventoryItem.findMany({
+		orderBy: [desc(inventoryItem.createdAt)],
+		limit: 10 // Just fetching simplified list for now
+	});
 
-	// Mock Lending
-	const lendings = [
-		{
-			id: '1',
-			assetName: 'Proyektor Epson',
-			borrower: 'Remaja Masjid',
-			date: '2023-12-01',
-			returnDate: '2023-12-02',
-			status: 'returned'
-		},
-		{
-			id: '2',
-			assetName: 'Sound System Portable',
-			borrower: 'Panitia Qurban',
-			date: '2023-12-05',
-			returnDate: '2023-12-06',
-			status: 'borrowed'
-		}
-	];
+	const assetsgood = await db.query.inventoryItem.findMany({
+		where: eq(inventoryItem.condition, 'good'),
+		orderBy: [desc(inventoryItem.createdAt)]
+	});
 
-	// Mock Maintenance
-	const maintenance = [
-		{
-			id: '1',
-			assetName: 'AC Daikin 2PK',
-			date: '2023-11-20',
-			description: 'Cuci AC rutin',
-			cost: 150000,
-			status: 'completed'
-		},
-		{
-			id: '2',
-			assetName: 'Sound System Yamaha',
-			date: '2023-12-10',
-			description: 'Ganti kabel mic',
-			cost: 50000,
-			status: 'scheduled'
-		}
-	];
+	const assetsmaintenance = await db.query.inventoryItem.findMany({
+		where: eq(inventoryItem.condition, 'maintenance'),
+		orderBy: [desc(inventoryItem.createdAt)]
+	});
 
+	// console.log('Assets in good condition:', assetsgood);
+
+	// Fetch Lending Data with Asset relation using Drizzle Query API
+	const lendings = await db.query.assetLending.findMany({
+		with: {
+			asset: true
+		},
+		orderBy: [desc(assetLending.borrowDate)]
+	});
+
+	const maintenance = await db.query.assetMaintenance.findMany({
+		with: {
+			asset: true
+		},
+		orderBy: [desc(assetMaintenance.maintenanceDate)]
+	});
+
+	// Calculate stats
 	const totalAssets = assets.reduce((acc, curr) => acc + curr.quantity, 0);
-	const totalValue = assets.reduce((acc, curr) => acc + curr.price * curr.quantity, 0);
-	const maintenanceCount = assets.filter((a) => a.condition === 'maintenance').length;
+	const totalValue = assets.reduce((acc, curr) => acc + Number(curr.price || 0) * curr.quantity, 0);
+	const inMaintenance = assets.filter((a) => a.condition === 'maintenance').length;
+	const borrowed = lendings.filter((l) => l.status === 'borrowed').length;
+
+	// Initialize forms
+	const lendingForm = await superValidate(valibot(lendingSchema));
+	const maintenanceForm = await superValidate(valibot(maintenanceSchema));
+
+	// Map for frontend simpler consumption if needed, or pass as is.
+	// The frontend expects: { assetName: ..., assetCode: ... } etc inside lending object.
+	// Since we now have `asset: { name: ..., code: ... }` nested, we might need to map it OR update frontend.
+	// Updating mapping here is safer to preserve frontend contract.
+
+	const lendingsMapped = lendings.map((l) => ({
+		...l,
+		assetName: l.asset?.name || 'Unknown',
+		assetCode: l.asset?.code || '-'
+	}));
+
+	const maintenanceMapped = maintenance.map((m) => ({
+		...m,
+		assetName: m.asset?.name || 'Unknown',
+		assetCode: m.asset?.code || '-'
+	}));
 
 	return {
 		assets,
-		lendings,
-		maintenance,
+		lendings: lendingsMapped,
+		maintenance: maintenanceMapped,
 		stats: {
 			totalAssets,
 			totalValue,
-			maintenanceCount
-		}
+			inMaintenance,
+			borrowed
+		},
+		lendingForm,
+		maintenanceForm,
+		assetsgood,
+		assetsmaintenance
 	};
 };
 
 export const actions: Actions = {
-	delete: async ({ request }) => {
+	// Asset Actions
+	deleteAsset: async ({ request }) => {
 		const formData = await request.formData();
-		const id = formData.get('id') as string;
+		const id = Number(formData.get('id'));
 
-		if (!id) return fail(400, { error: 'ID tidak ditemukan' });
+		if (!id) return fail(400, { message: 'Invalid ID' });
 
-		// TODO: Delete from database
-		console.log('Deleting asset:', id);
+		try {
+			await db.delete(inventoryItem).where(eq(inventoryItem.id, id));
+			return { success: true, message: 'Aset berhasil dihapus' };
+		} catch (error) {
+			console.error('Error deleting asset:', error);
+			return fail(500, {
+				message: 'Gagal menghapus aset. Pastikan tidak ada data peminjaman terkait.'
+			});
+		}
+	},
 
-		return { success: true, message: 'Aset berhasil dihapus' };
+	// Lending Actions
+	createLending: async ({ request }) => {
+		const form = await superValidate(request, valibot(lendingSchema));
+		if (!form.valid) return fail(400, { form });
+
+		const serializableForm = JSON.parse(JSON.stringify(form));
+
+		try {
+			await db.insert(assetLending).values({
+				assetId: form.data.assetId,
+				borrowerName: form.data.borrowerName,
+				borrowerContact: form.data.borrowerContact,
+				borrowDate: form.data.borrowDate ? new Date(form.data.borrowDate) : new Date(),
+				notes: form.data.notes,
+				status: 'borrowed'
+			});
+			return { form: serializableForm, success: true, message: 'Peminjaman berhasil dicatat' };
+		} catch (error) {
+			console.error(error);
+			return fail(500, { form: serializableForm, message: 'Gagal mencatat peminjaman' });
+		}
+	},
+
+	returnLending: async ({ request }) => {
+		const formData = await request.formData();
+		const id = Number(formData.get('id'));
+		if (!id) return fail(400, { message: 'Invalid ID' });
+
+		try {
+			await db
+				.update(assetLending)
+				.set({
+					status: 'returned',
+					returnDate: new Date()
+				})
+				.where(eq(assetLending.id, id));
+			return { success: true, message: 'Aset telah dikembalikan' };
+		} catch (error) {
+			console.error(error);
+			return fail(500, { message: 'Gagal memproses pengembalian' });
+		}
+	},
+
+	// Maintenance Actions
+	createMaintenance: async ({ request }) => {
+		const form = await superValidate(request, valibot(maintenanceSchema));
+		if (!form.valid) return fail(400, { form });
+
+		const serializableForm = JSON.parse(JSON.stringify(form));
+
+		try {
+			await db.insert(assetMaintenance).values({
+				assetId: form.data.assetId,
+				maintenanceDate: form.data.maintenanceDate,
+				description: form.data.description,
+				cost: form.data.cost ? String(form.data.cost) : '0',
+				performer: form.data.performer,
+				status: (form.data.status as any) || 'scheduled',
+				notes: form.data.notes
+			});
+			// Optionally update asset condition
+			if (form.data.status === 'in_progress') {
+				await db
+					.update(inventoryItem)
+					.set({ condition: 'maintenance' })
+					.where(eq(inventoryItem.id, form.data.assetId));
+			}
+			return { form: serializableForm, success: true, message: 'Maintenance berhasil dijadwalkan' };
+		} catch (error) {
+			console.error(error);
+			return fail(500, { form: serializableForm, message: 'Gagal menyimpan data maintenance' });
+		}
+	},
+
+	completeMaintenance: async ({ request }) => {
+		const formData = await request.formData();
+		const id = Number(formData.get('id'));
+		const cost = formData.get('realCost') as string; // optionally update cost on completion
+
+		if (!id) return fail(400, { message: 'Invalid ID' });
+
+		try {
+			await db
+				.update(assetMaintenance)
+				.set({
+					status: 'completed',
+					cost: cost ? cost : undefined
+				})
+				.where(eq(assetMaintenance.id, id));
+
+			// Revert asset condition to good? (Optional logic)
+			// await db.update(inventoryItem).set({ condition: 'good' }).where(...);
+
+			return { success: true, message: 'Maintenance selesai' };
+		} catch (error) {
+			console.error(error);
+			return fail(500, { message: 'Gagal menyelesaikan maintenance' });
+		}
+	},
+
+	// Export Action - trigger redirect to export endpoint
+	exportCSV: async () => {
+		return { success: true, redirect: '/admin/inventaris/export' };
 	}
 };

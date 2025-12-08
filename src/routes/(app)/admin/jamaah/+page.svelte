@@ -297,12 +297,12 @@
 								<td>
 									<div class="flex items-center gap-3">
 										<div class="avatar placeholder">
-											<div class="bg-primary/10 text-primary rounded-full w-10">
+											<div class="bg-primary/10 text-primary rounded-full w-10 flex items-center justify-center">
 												<span class="text-sm">{member.fullName.charAt(0).toUpperCase()}</span>
 											</div>
 										</div>
 										<div>
-											<div class="font-medium">{member.fullName}</div>
+											<div class="font-medium capitalize">{member.fullName}</div>
 											{#if member.nik}
 												<div class="text-xs text-base-content/50">NIK: {member.nik}</div>
 											{/if}

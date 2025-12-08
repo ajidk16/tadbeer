@@ -257,6 +257,7 @@ export const inventoryItem = pgTable('inventory_item', {
 	location: text('location'),
 	purchaseDate: date('purchase_date'),
 	price: decimal('price', { precision: 15, scale: 2 }),
+	description: text('description'),
 	imageUrl: text('image_url'),
 	createdAt: timestamp('created_at').defaultNow().notNull(),
 	updatedAt: timestamp('updated_at').defaultNow().notNull(),
@@ -333,6 +334,51 @@ export const protectedRoute = pgTable('protected_route', {
 	id: serial('id').primaryKey(),
 	prefix: text('prefix').notNull().unique(), // e.g., '/admin/users'
 	roles: text('roles').array().notNull(), // e.g., ['super_admin']
+	createdAt: timestamp('created_at').defaultNow().notNull(),
+	updatedAt: timestamp('updated_at').defaultNow().notNull()
+});
+
+// --- Inventory Extensions ---
+export const lendingStatusEnum = pgEnum('lending_status', [
+	'borrowed',
+	'returned',
+	'overdue',
+	'lost'
+]);
+export const maintenanceStatusEnum = pgEnum('maintenance_status', [
+	'scheduled',
+	'in_progress',
+	'completed',
+	'cancelled'
+]);
+
+export const assetLending = pgTable('asset_lending', {
+	id: serial('id').primaryKey(),
+	assetId: integer('asset_id')
+		.references(() => inventoryItem.id)
+		.notNull(),
+	borrowerName: text('borrower_name').notNull(),
+	borrowerContact: text('borrower_contact'), // Phone or Email
+	borrowDate: timestamp('borrow_date').defaultNow().notNull(),
+	returnDate: timestamp('return_date'), // Expected or Actual
+	status: lendingStatusEnum('status').default('borrowed').notNull(),
+	notes: text('notes'),
+	recordedBy: text('recorded_by').references(() => user.id),
+	createdAt: timestamp('created_at').defaultNow().notNull(),
+	updatedAt: timestamp('updated_at').defaultNow().notNull()
+});
+
+export const assetMaintenance = pgTable('asset_maintenance', {
+	id: serial('id').primaryKey(),
+	assetId: integer('asset_id')
+		.references(() => inventoryItem.id)
+		.notNull(),
+	maintenanceDate: date('maintenance_date').notNull(),
+	description: text('description').notNull(),
+	cost: decimal('cost', { precision: 15, scale: 2 }).default('0').notNull(),
+	performer: text('performer'), // Technician / Vendor name
+	status: maintenanceStatusEnum('status').default('scheduled').notNull(),
+	notes: text('notes'),
 	createdAt: timestamp('created_at').defaultNow().notNull(),
 	updatedAt: timestamp('updated_at').defaultNow().notNull()
 });

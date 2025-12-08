@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { superForm } from 'sveltekit-superforms';
 	import { Badge, Toast, success as toastSuccess, error as toastError } from '$lib/components/ui';
 	import {
 		Plus,
@@ -16,8 +17,11 @@
 		Package,
 		DollarSign,
 		AlertTriangle,
-		Image as ImageIcon
+		Image as ImageIcon,
+		CheckCircle,
+		X
 	} from 'lucide-svelte';
+	import { page } from '$app/state';
 
 	let { data } = $props();
 
@@ -27,8 +31,45 @@
 	let selectedCategory = $state('');
 	let selectedCondition = $state('');
 
+	// SuperForms
+	const {
+		form: lendingFormData,
+		errors: lendingErrors,
+		enhance: lendingEnhance,
+		delayed: lendingDelayed
+	} = superForm(data.lendingForm, {
+		id: 'lendingForm',
+		onResult: ({ result }) => {
+			if (result.type === 'success') {
+				toastSuccess('Peminjaman berhasil dicatat');
+				showLendingModal = false;
+			} else if (result.type === 'failure') {
+				toastError('Gagal mencatat peminjaman');
+			}
+		}
+	});
+
+	const {
+		form: maintenanceFormData,
+		errors: maintenanceErrors,
+		enhance: maintenanceEnhance,
+		delayed: maintenanceDelayed
+	} = superForm(data.maintenanceForm, {
+		id: 'maintenanceForm',
+		onResult: ({ result }) => {
+			if (result.type === 'success') {
+				toastSuccess('Maintenance berhasil dijadwalkan');
+				showMaintenanceModal = false;
+			} else if (result.type === 'failure') {
+				toastError('Gagal menjadwalkan maintenance');
+			}
+		}
+	});
+
 	// Modal states
 	let showDeleteModal = $state(false);
+	let showLendingModal = $state(false);
+	let showMaintenanceModal = $state(false);
 	let selectedAsset = $state<(typeof data.assets)[0] | null>(null);
 
 	// Filtered assets
@@ -40,7 +81,7 @@
 				(a) =>
 					a.name.toLowerCase().includes(q) ||
 					a.code.toLowerCase().includes(q) ||
-					a.location.toLowerCase().includes(q)
+					(a.location && a.location.toLowerCase().includes(q))
 			);
 		}
 		if (selectedCategory) result = result.filter((a) => a.category === selectedCategory);
@@ -48,12 +89,12 @@
 		return result;
 	});
 
-	function formatCurrency(amount: number) {
+	function formatCurrency(amount: any) {
 		return new Intl.NumberFormat('id-ID', {
 			style: 'currency',
 			currency: 'IDR',
 			maximumFractionDigits: 0
-		}).format(amount);
+		}).format(Number(amount) || 0);
 	}
 
 	function getConditionBadge(condition: string) {
@@ -76,6 +117,7 @@
 		return map[condition] || condition;
 	}
 
+	// Delete Asset Logic
 	function openDelete(asset: (typeof data.assets)[0]) {
 		selectedAsset = asset;
 		showDeleteModal = true;
@@ -89,7 +131,31 @@
 				toastSuccess('Aset berhasil dihapus');
 				await update();
 			} else if (result.type === 'failure') {
-				toastError(result.data?.error || 'Gagal menghapus');
+				toastError(result.data?.message || 'Gagal menghapus');
+			}
+		};
+	}
+
+	// Return Lending Logic
+	function handleReturn() {
+		return async ({ result, update }: any) => {
+			if (result.type === 'success') {
+				toastSuccess('Aset dikembalikan');
+				await update();
+			} else {
+				toastError(result.data?.message || 'Gagal');
+			}
+		};
+	}
+
+	// Complete Maintenance Logic
+	function handleCompleteMaintenance() {
+		return async ({ result, update }: any) => {
+			if (result.type === 'success') {
+				toastSuccess('Maintenance selesai');
+				await update();
+			} else {
+				toastError(result.data?.message || 'Gagal');
 			}
 		};
 	}
@@ -109,10 +175,12 @@
 			<p class="text-base-content/60 mt-1">Manajemen aset dan perlengkapan masjid</p>
 		</div>
 		<div class="flex gap-2">
-			<button class="btn btn-ghost btn-sm">
-				<Download class="w-4 h-4" />
-				Export
-			</button>
+			<form method="POST" action="?/exportCSV" use:enhance>
+				<button type="submit" class="btn btn-ghost btn-sm">
+					<Download class="w-4 h-4" />
+					Export
+				</button>
+			</form>
 			<a href="/admin/inventaris/tambah" class="btn btn-primary btn-sm">
 				<Plus class="w-4 h-4" />
 				Tambah Aset
@@ -135,10 +203,16 @@
 			<div class="stat-desc">Estimasi nilai aset</div>
 		</div>
 		<div class="stat">
-			<div class="stat-figure text-warning"><Wrench class="w-8 h-8" /></div>
-			<div class="stat-title">Perlu Perbaikan</div>
-			<div class="stat-value text-xl text-warning">{data.stats.maintenanceCount}</div>
-			<div class="stat-desc">Unit barang</div>
+			<div class="stat-figure text-warning"><Box class="w-8 h-8" /></div>
+			<div class="stat-title">Dipinjam</div>
+			<div class="stat-value text-xl text-warning">{data.stats.borrowed}</div>
+			<div class="stat-desc">Sedang dipinjam</div>
+		</div>
+		<div class="stat">
+			<div class="stat-figure text-error"><Wrench class="w-8 h-8" /></div>
+			<div class="stat-title">Perbaikan</div>
+			<div class="stat-value text-xl text-error">{data.stats.inMaintenance}</div>
+			<div class="stat-desc">Dalam maintenance</div>
 		</div>
 	</div>
 
@@ -188,6 +262,8 @@
 					<option value="Elektronik">Elektronik</option>
 					<option value="Furniture">Furniture</option>
 					<option value="Perlengkapan">Perlengkapan</option>
+					<option value="Kendaraan">Kendaraan</option>
+					<option value="Lainnya">Lainnya</option>
 				</select>
 				<select class="select select-bordered select-sm" bind:value={selectedCondition}>
 					<option value="">Semua Kondisi</option>
@@ -218,13 +294,15 @@
 									<tr class="hover:bg-base-200/50">
 										<td>
 											<div class="flex items-center gap-3">
-												<div class="avatar rounded-lg {asset.image ? '' : 'placeholder'}">
-													{#if asset.image}
+												<div class="avatar rounded-lg {asset.imageUrl ? '' : 'placeholder'}">
+													{#if asset.imageUrl}
 														<div class="w-12 h-12 rounded-lg">
-															<img src={asset.image} alt={asset.name} />
+															<img src={asset.imageUrl} alt={asset.name} />
 														</div>
 													{:else}
-														<div class="bg-base-200 text-base-content/50 rounded-lg w-12 h-12">
+														<div
+															class="bg-base-200 text-base-content/50 rounded-lg w-12 h-12 flex items-center justify-center"
+														>
 															<ImageIcon class="w-6 h-6" />
 														</div>
 													{/if}
@@ -283,7 +361,7 @@
 						<input type="text" placeholder="Cari peminjam..." class="grow" />
 					</label>
 				</div>
-				<button class="btn btn-primary btn-sm">
+				<button class="btn btn-primary btn-sm" onclick={() => (showLendingModal = true)}>
 					<Plus class="w-4 h-4" /> Catat Peminjaman
 				</button>
 			</div>
@@ -304,11 +382,25 @@
 							<tbody>
 								{#each data.lendings as lending (lending.id)}
 									<tr class="hover:bg-base-200/50">
-										<td class="font-medium">{lending.assetName}</td>
-										<td>{lending.borrower}</td>
+										<td class="font-medium">
+											<div>{lending.assetName}</div>
+											<div class="text-xs text-base-content/60">{lending.assetCode}</div>
+										</td>
 										<td>
-											<div class="text-sm">{lending.date}</div>
-											<div class="text-xs text-base-content/50">Kembali: {lending.returnDate}</div>
+											<div>{lending.borrowerName}</div>
+											<!--<div class="text-xs text-base-content/60">{lending.borrowerContact}</div>-->
+										</td>
+										<td>
+											<div class="text-sm">
+												{lending.borrowDate
+													? new Date(lending.borrowDate).toLocaleDateString('id-ID')
+													: '-'}
+											</div>
+											{#if lending.returnDate}
+												<div class="text-xs text-base-content/50">
+													Kembali: {new Date(lending.returnDate).toLocaleDateString('id-ID')}
+												</div>
+											{/if}
 										</td>
 										<td>
 											<Badge
@@ -320,10 +412,23 @@
 										</td>
 										<td>
 											<div class="flex justify-center gap-1">
-												<button class="btn btn-ghost btn-xs btn-square">
-													<SquarePen class="w-4 h-4" />
-												</button>
+												{#if lending.status === 'borrowed'}
+													<form method="POST" action="?/returnLending" use:enhance={handleReturn}>
+														<input type="hidden" name="id" value={lending.id} />
+														<button class="btn btn-ghost btn-xs text-primary" title="Kembalikan">
+															<CheckCircle class="w-4 h-4" /> Kembalikan
+														</button>
+													</form>
+												{:else}
+													<span class="text-base-content/50 italic">Dikembalikan</span>
+												{/if}
 											</div>
+										</td>
+									</tr>
+								{:else}
+									<tr>
+										<td colspan="5" class="text-center py-12 text-base-content/50">
+											Tidak ada riwayat peminjaman
 										</td>
 									</tr>
 								{/each}
@@ -342,7 +447,7 @@
 						<input type="text" placeholder="Cari log..." class="grow" />
 					</label>
 				</div>
-				<button class="btn btn-primary btn-sm">
+				<button class="btn btn-primary btn-sm" onclick={() => (showMaintenanceModal = true)}>
 					<Plus class="w-4 h-4" /> Catat Maintenance
 				</button>
 			</div>
@@ -358,19 +463,46 @@
 									<th>Deskripsi</th>
 									<th>Biaya</th>
 									<th>Status</th>
+									<th>Aksi</th>
 								</tr>
 							</thead>
 							<tbody>
 								{#each data.maintenance as log (log.id)}
 									<tr class="hover:bg-base-200/50">
 										<td class="font-medium">{log.assetName}</td>
-										<td>{log.date}</td>
+										<td
+											>{log.maintenanceDate
+												? new Date(log.maintenanceDate).toLocaleDateString('id-ID')
+												: '-'}</td
+										>
 										<td>{log.description}</td>
 										<td>{formatCurrency(log.cost)}</td>
 										<td>
 											<Badge variant={log.status === 'completed' ? 'success' : 'info'} size="sm">
 												{log.status === 'completed' ? 'Selesai' : 'Terjadwal'}
 											</Badge>
+										</td>
+										<td>
+											{#if log.status !== 'completed' && log.status !== 'cancelled'}
+												<form
+													method="POST"
+													action="?/completeMaintenance"
+													use:enhance={handleCompleteMaintenance}
+												>
+													<input type="hidden" name="id" value={log.id} />
+													<button class="btn btn-ghost btn-xs text-success" title="Selesai">
+														<CheckCircle class="w-4 h-4" />
+													</button>
+												</form>
+											{:else}
+												<span class="text-base-content/50 italic">Selesai</span>
+											{/if}
+										</td>
+									</tr>
+								{:else}
+									<tr>
+										<td colspan="6" class="text-center py-12 text-base-content/50">
+											Tidak ada riwayat maintenance
 										</td>
 									</tr>
 								{/each}
@@ -383,6 +515,168 @@
 	{/if}
 </div>
 
+<!-- Logging Modal (Peminjaman) -->
+<dialog class="modal {showLendingModal ? 'modal-open' : ''}">
+	<div class="modal-box">
+		<h3 class="font-bold text-lg mb-4">Catat Peminjaman</h3>
+		<form method="POST" action="?/createLending" use:lendingEnhance>
+			<div class="space-y-4">
+				<div class="form-control">
+					<label for="assetId" class="label">Aset</label>
+					<select
+						name="assetId"
+						class="select select-bordered w-full"
+						bind:value={$lendingFormData.assetId}
+					>
+						<option value={0}>Pilih Aset</option>
+						{#each page.data.assetsgood as asset}
+							<option value={asset.id}>{asset.name} ({asset.code})</option>
+						{/each}
+					</select>
+					{#if $lendingErrors.assetId}<span class="text-error text-xs"
+							>{$lendingErrors.assetId}</span
+						>{/if}
+				</div>
+				<div class="form-control">
+					<label for="borrowerName" class="label">Nama Peminjam</label>
+					<input
+						type="text"
+						name="borrowerName"
+						class="input input-bordered w-full"
+						bind:value={$lendingFormData.borrowerName}
+					/>
+					{#if $lendingErrors.borrowerName}<span class="text-error text-xs"
+							>{$lendingErrors.borrowerName}</span
+						>{/if}
+				</div>
+				<div class="form-control">
+					<label for="borrowerContact" class="label">Kontak (HP/WA)</label>
+					<input
+						type="text"
+						name="borrowerContact"
+						class="input input-bordered w-full"
+						bind:value={$lendingFormData.borrowerContact}
+					/>
+				</div>
+				<div class="form-control">
+					<label for="borrowDate" class="label">Tanggal Pinjam</label>
+					<input
+						type="date"
+						name="borrowDate"
+						class="input input-bordered w-full"
+						bind:value={$lendingFormData.borrowDate}
+					/>
+				</div>
+				<div class="form-control">
+					<label for="notes" class="label">Catatan</label>
+					<textarea
+						name="notes"
+						class="textarea textarea-bordered w-full"
+						bind:value={$lendingFormData.notes}
+					></textarea>
+				</div>
+			</div>
+			<div class="modal-action">
+				<button type="button" class="btn btn-ghost" onclick={() => (showLendingModal = false)}
+					>Batal</button
+				>
+				<button type="submit" class="btn btn-primary" disabled={$lendingDelayed}>Simpan</button>
+			</div>
+		</form>
+	</div>
+</dialog>
+
+<!-- Maintenance Modal -->
+<dialog class="modal {showMaintenanceModal ? 'modal-open' : ''}">
+	<div class="modal-box">
+		<h3 class="font-bold text-lg mb-4">Catat Maintenance</h3>
+		<form method="POST" action="?/createMaintenance" use:maintenanceEnhance>
+			<div class="space-y-4">
+				<div class="form-control">
+					<label for="assetId" class="label">Aset</label>
+					<select
+						name="assetId"
+						class="select select-bordered w-full"
+						bind:value={$maintenanceFormData.assetId}
+					>
+						<option value={0}>Pilih Aset</option>
+						{#each page.data.assetsmaintenance as asset}
+							<option value={asset.id}>{asset.name} ({asset.code})</option>
+						{/each}
+					</select>
+					{#if $maintenanceErrors.assetId}<span class="text-error text-xs"
+							>{$maintenanceErrors.assetId}</span
+						>{/if}
+				</div>
+				<div class="form-control">
+					<label for="description" class="label">Deskripsi Kerusakan/Maintenance</label>
+					<input
+						type="text"
+						name="description"
+						class="input input-bordered w-full"
+						bind:value={$maintenanceFormData.description}
+					/>
+					{#if $maintenanceErrors.description}<span class="text-error text-xs"
+							>{$maintenanceErrors.description}</span
+						>{/if}
+				</div>
+				<div class="form-control">
+					<label for="maintenanceDate" class="label">Tanggal</label>
+					<input
+						type="date"
+						name="maintenanceDate"
+						class="input input-bordered w-full"
+						bind:value={$maintenanceFormData.maintenanceDate}
+					/>
+					{#if $maintenanceErrors.maintenanceDate}
+						<span class="text-error text-xs">
+							{$maintenanceErrors.maintenanceDate}
+						</span>{/if}
+				</div>
+				<div class="form-control">
+					<label for="status" class="label">Status</label>
+					<select
+						name="status"
+						class="select select-bordered w-full"
+						bind:value={$maintenanceFormData.status}
+					>
+						<option value="scheduled">Terjadwal</option>
+						<option value="in_progress">Sedang Dikerjakan</option>
+						<option value="completed">Selesai</option>
+					</select>
+				</div>
+				<div class="form-control">
+					<label for="performer" class="label">Pelaksana (Teknisi/Vendor)</label>
+					<input
+						type="text"
+						name="performer"
+						class="input input-bordered w-full"
+						bind:value={$maintenanceFormData.performer}
+					/>
+				</div>
+				<div class="form-control">
+					<label for="cost" class="label">Estimasi Biaya</label>
+					<div class="input-group">
+						<span class="bg-base-200 px-3 py-2 border rounded-l-lg flex items-center">Rp</span>
+						<input
+							type="number"
+							name="cost"
+							class="input input-bordered w-full rounded-l-none"
+							bind:value={$maintenanceFormData.cost}
+						/>
+					</div>
+				</div>
+			</div>
+			<div class="modal-action">
+				<button type="button" class="btn btn-ghost" onclick={() => (showMaintenanceModal = false)}
+					>Batal</button
+				>
+				<button type="submit" class="btn btn-primary" disabled={$maintenanceDelayed}>Simpan</button>
+			</div>
+		</form>
+	</div>
+</dialog>
+
 <!-- Delete Modal -->
 {#if showDeleteModal && selectedAsset}
 	<dialog class="modal modal-open">
@@ -391,10 +685,10 @@
 			<p class="py-4">Apakah Anda yakin ingin menghapus aset ini?</p>
 			<div class="bg-base-200 rounded-lg p-4 mb-4">
 				<div class="flex items-center gap-3">
-					<div class="avatar rounded-lg {selectedAsset.image ? '' : 'placeholder'}">
-						{#if selectedAsset.image}
+					<div class="avatar rounded-lg {selectedAsset.imageUrl ? '' : 'placeholder'}">
+						{#if selectedAsset.imageUrl}
 							<div class="w-12 h-12 rounded-lg">
-								<img src={selectedAsset.image} alt={selectedAsset.name} />
+								<img src={selectedAsset.imageUrl} alt={selectedAsset.name} />
 							</div>
 						{:else}
 							<div class="bg-base-300 text-base-content/50 rounded-lg w-12 h-12">
@@ -416,7 +710,7 @@
 						selectedAsset = null;
 					}}>Batal</button
 				>
-				<form method="POST" action="?/delete" use:enhance={() => handleDelete()}>
+				<form method="POST" action="?/deleteAsset" use:enhance={() => handleDelete()}>
 					<input type="hidden" name="id" value={selectedAsset.id} />
 					<button type="submit" class="btn btn-error"><Trash2 class="w-4 h-4" /> Hapus</button>
 				</form>

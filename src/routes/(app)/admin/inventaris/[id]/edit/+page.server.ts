@@ -1,73 +1,101 @@
 import type { Actions, PageServerLoad } from './$types';
-import { fail, redirect } from '@sveltejs/kit';
+import { fail, redirect, error } from '@sveltejs/kit';
+import { superValidate } from 'sveltekit-superforms';
+import { valibot } from 'sveltekit-superforms/adapters';
+import { inventorySchema } from '$lib/schemas';
+import { db } from '$lib/server/db';
+import { inventoryItem } from '$lib/server/db/schema';
+import { eq } from 'drizzle-orm';
+import { uploadImageFromBuffer } from '$lib/server/cloudinary';
 
 export const load: PageServerLoad = async ({ params }) => {
-	const { id } = params;
+	const id = Number(params.id);
+	if (!id) throw error(404, 'Invalid ID');
 
-	// Mock data - replace with database query
-	const asset = {
-		id,
-		name: 'Sound System Yamaha',
-		code: 'INV-001',
-		category: 'Elektronik',
-		condition: 'good',
-		quantity: 1,
-		location: 'Ruang Utama',
-		purchaseDate: '2023-01-15',
-		price: 15000000,
-		description: 'Sound system utama untuk sholat Jumat dan kajian.',
-		image:
-			'https://images.unsplash.com/photo-1520166012956-add9ba0835ce?w=800&auto=format&fit=crop&q=60'
-	};
+	const asset = await db.query.inventoryItem.findFirst({
+		where: eq(inventoryItem.id, id)
+	});
 
-	return { asset };
+	if (!asset) throw error(404, 'Aset tidak ditemukan');
+
+	const form = await superValidate(valibot(inventorySchema), {
+		defaults: {
+			name: asset.name,
+			code: asset.code,
+			category: asset.category,
+			quantity: asset.quantity,
+			condition: asset.condition,
+			location: asset.location || undefined,
+			purchaseDate: asset.purchaseDate || undefined,
+			price: asset.price ? Number(asset.price) : undefined,
+			description: asset.description || undefined
+			// Should I pass id? schema has optional id.
+		}
+	});
+
+	return { form, asset };
 };
 
 export const actions: Actions = {
 	update: async ({ request, params }) => {
 		const formData = await request.formData();
+		const form = await superValidate(formData, valibot(inventorySchema));
 
-		const name = formData.get('name') as string;
-		const code = formData.get('code') as string;
-		const category = formData.get('category') as string;
-		const quantity = formData.get('quantity') as string;
-		const condition = formData.get('condition') as string;
-		const location = formData.get('location') as string;
-		const purchaseDate = formData.get('purchaseDate') as string;
-		const price = formData.get('price') as string;
-		const description = formData.get('description') as string;
-		const image = formData.get('image') as File;
-
-		if (!name || !category || !quantity || !condition) {
-			return fail(400, { error: 'Nama, kategori, jumlah, dan kondisi wajib diisi' });
+		if (!form.valid) {
+			return fail(400, { form });
 		}
 
-		// TODO: Upload image if exists
-		if (image && image.size > 0) {
-			console.log('Uploading image:', image.name, image.size);
+		const id = Number(params.id);
+
+		// Handle Image Upload
+		let imageUrl = undefined;
+		const imageFile = formData.get('image') as File;
+		if (imageFile && imageFile.size > 0 && imageFile.name !== 'undefined') {
+			try {
+				const buffer = Buffer.from(await imageFile.arrayBuffer());
+				const uploadResult = await uploadImageFromBuffer(buffer, 'tadbeer/inventory');
+				if (uploadResult?.secure_url) {
+					imageUrl = uploadResult.secure_url;
+				}
+			} catch (error) {
+				console.error('Failed to upload asset image:', error);
+			}
 		}
 
-		// TODO: Update in database
-		console.log('Updating asset:', {
-			id: params.id,
-			name,
-			code,
-			category,
-			quantity,
-			condition,
-			location,
-			purchaseDate,
-			price,
-			description
-		});
+		try {
+			await db
+				.update(inventoryItem)
+				.set({
+					name: form.data.name,
+					code: form.data.code,
+					category: form.data.category,
+					quantity: form.data.quantity,
+					// @ts-ignore
+					condition: form.data.condition as any,
+					location: form.data.location,
+					purchaseDate: form.data.purchaseDate || null,
+					price: form.data.price ? String(form.data.price) : null,
+					description: form.data.description,
+					...(imageUrl ? { imageUrl } : {}) // Only update image if new one uploaded
+				})
+				.where(eq(inventoryItem.id, id));
+		} catch (error) {
+			console.error('Error updating asset:', error);
+			return fail(500, { form, message: 'Gagal memperbarui aset' });
+		}
 
-		throw redirect(303, '/inventaris');
+		throw redirect(303, '/admin/inventaris');
 	},
 
 	delete: async ({ params }) => {
-		// TODO: Delete from database
-		console.log('Deleting asset:', params.id);
-
-		throw redirect(303, '/inventaris');
+		const id = Number(params.id);
+		try {
+			await db.delete(inventoryItem).where(eq(inventoryItem.id, id));
+		} catch (error) {
+			console.error('Error deleting asset:', error);
+			// Return fail if needed, but for simple delete action usually redirects
+			// If referential integrity fails (lending exists), it will throw.
+		}
+		throw redirect(303, '/admin/inventaris');
 	}
 };
