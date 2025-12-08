@@ -12,7 +12,9 @@ import {
 	roles,
 	inventoryItem,
 	assetLending,
-	assetMaintenance
+	assetMaintenance,
+	notification,
+	userSettings
 } from './schema';
 
 export const userRelations = relations(user, ({ many, one }) => ({
@@ -21,6 +23,11 @@ export const userRelations = relations(user, ({ many, one }) => ({
 	verifiedDonations: many(donation),
 	authoredAnnouncements: many(announcement),
 	auditLogs: many(auditLog),
+	notifications: many(notification),
+	settings: one(userSettings, {
+		fields: [user.id],
+		references: [userSettings.userId]
+	}),
 	role: one(roles, {
 		fields: [user.roleId],
 		references: [roles.id]
@@ -97,5 +104,19 @@ export const assetMaintenanceRelations = relations(assetMaintenance, ({ one }) =
 	asset: one(inventoryItem, {
 		fields: [assetMaintenance.assetId],
 		references: [inventoryItem.id]
+	})
+}));
+
+export const notificationRelations = relations(notification, ({ one }) => ({
+	user: one(user, {
+		fields: [notification.userId],
+		references: [user.id]
+	})
+}));
+
+export const userSettingsRelations = relations(userSettings, ({ one }) => ({
+	user: one(user, {
+		fields: [userSettings.userId],
+		references: [user.id]
 	})
 }));

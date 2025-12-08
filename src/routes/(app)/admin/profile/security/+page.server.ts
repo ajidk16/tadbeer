@@ -6,7 +6,7 @@ import { db } from '$lib/server/db';
 import * as table from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
 import { logAudit } from '$lib/server/audit';
-import { lucia } from '$lib/server/auth';
+import { createSession, invalidateSession, setSessionTokenCookie } from '$lib/server/auth';
 import { verify, hash } from '@node-rs/argon2';
 
 export const load = async ({ locals }) => {
@@ -20,7 +20,8 @@ export const load = async ({ locals }) => {
 };
 
 export const actions = {
-	default: async ({ request, locals, cookies }) => {
+	default: async (event) => {
+		const { request, locals } = event;
 		if (!locals.user) return fail(401);
 		const form = await superValidate(request, valibot(securitySchema));
 
@@ -66,16 +67,12 @@ export const actions = {
 				.where(eq(table.user.id, locals.user.id));
 
 			// Invalidate all sessions
-			await lucia.invalidateUserSessions(locals.user.id);
-
+			if (locals.session) {
+				await invalidateSession(String(locals.session.id));
+			}
 			// Create new session for current user
-			const session = await lucia.createSession(locals.user.id, {});
-			const sessionCookie = lucia.createSessionCookie(session.id);
-
-			cookies.set(sessionCookie.name, sessionCookie.value, {
-				path: '.',
-				...sessionCookie.attributes
-			});
+			const session = await createSession(locals.user.id, request.headers.get('user-agent') || '');
+			setSessionTokenCookie(event, session.id, session.expiresAt);
 
 			await logAudit(locals.user.id, 'UPDATE', 'user', locals.user.id, {
 				newValues: { passwordChanged: true, reason: 'user_initiated' }

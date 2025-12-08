@@ -223,6 +223,7 @@ export const announcementSchema = v.object({
 
 export type AnnouncementSchema = typeof announcementSchema;
 
+// ... existing code ...
 export const khutbahSchema = v.object({
 	id: v.optional(v.number()),
 	date: v.pipe(v.string(), v.minLength(1, 'Tanggal wajib diisi')),
@@ -233,3 +234,12 @@ export const khutbahSchema = v.object({
 });
 
 export type KhutbahSchema = typeof khutbahSchema;
+
+export const notificationSettingsSchema = v.object({
+	activityUpdates: v.boolean(),
+	marketingTips: v.boolean(),
+	realtimeAlerts: v.boolean(),
+	securityAlerts: v.boolean()
+});
+
+export type NotificationSettingsSchema = typeof notificationSettingsSchema;

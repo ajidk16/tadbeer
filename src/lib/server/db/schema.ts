@@ -404,3 +404,34 @@ export const broadcastLog = pgTable('broadcast_log', {
 	status: text('status').default('sent').notNull(), // sent, failed
 	createdAt: timestamp('created_at').defaultNow().notNull()
 });
+
+export const notificationTypeEnum = pgEnum('notification_type', [
+	'info',
+	'success',
+	'warning',
+	'error'
+]);
+
+export const notification = pgTable('notification', {
+	id: serial('id').primaryKey(),
+	userId: text('user_id').references(() => user.id), // Link to user
+	type: notificationTypeEnum('type').default('info').notNull(),
+	title: text('title').notNull(),
+	message: text('message').notNull(),
+	read: boolean('read').default(false).notNull(),
+	createdAt: timestamp('created_at').defaultNow().notNull()
+});
+
+export const userSettings = pgTable('user_settings', {
+	id: serial('id').primaryKey(),
+	userId: text('user_id')
+		.references(() => user.id)
+		.unique()
+		.notNull(),
+	activityUpdates: boolean('activity_updates').default(true).notNull(),
+	marketingTips: boolean('marketing_tips').default(true).notNull(),
+	realtimeAlerts: boolean('realtime_alerts').default(true).notNull(),
+	securityAlerts: boolean('security_alerts').default(true).notNull(),
+	createdAt: timestamp('created_at').defaultNow().notNull(),
+	updatedAt: timestamp('updated_at').defaultNow().notNull()
+});

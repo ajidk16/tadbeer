@@ -1,62 +1,27 @@
 <script lang="ts">
+	import { enhance } from '$app/forms';
 	import { Bell, Check, Info, AlertTriangle, CheckCircle, Settings, Trash2 } from 'lucide-svelte';
+	import { page } from '$app/state';
 
-	let notifications = $state([
-		{
-			id: 1,
-			type: 'info',
-			title: 'New Feature Available',
-			message: 'You can now schedule recurring donations.',
-			time: '2 hours ago',
-			read: false
-		},
-		{
-			id: 2,
-			type: 'success',
-			title: 'Donation Received',
-			message: 'Received Rp 500.000 from Hamba Allah.',
-			time: '5 hours ago',
-			read: false
-		},
-		{
-			id: 3,
-			type: 'warning',
-			title: 'Storage Limit',
-			message: 'You are approaching your storage limit for media uploads.',
-			time: '1 day ago',
-			read: true
-		},
-		{
-			id: 4,
-			type: 'info',
-			title: 'System Update',
-			message: 'System maintenance scheduled for tonight at 02:00 AM.',
-			time: '2 days ago',
-			read: true
-		},
-		{
-			id: 5,
-			type: 'success',
-			title: 'Campaign Goal Reached',
-			message: 'Ramadhan Berbagi campaign has reached its goal!',
-			time: '3 days ago',
-			read: true
-		}
-	]);
+	let { data } = $props();
 
-	function markAsRead(id: number) {
-		notifications = notifications.map((n) => (n.id === id ? { ...n, read: true } : n));
-	}
-
-	function markAllRead() {
-		notifications = notifications.map((n) => ({ ...n, read: true }));
-	}
-
-	function deleteNotification(id: number) {
-		notifications = notifications.filter((n) => n.id !== id);
-	}
-
+	// Using reactive derived state from page data
+	let notifications = $derived(data.notifications);
 	let unreadCount = $derived(notifications.filter((n) => !n.read).length);
+
+	function formatDate(date: Date | string) {
+		if (!date) return '';
+		const d = new Date(date);
+		const now = new Date();
+		const diffMs = now.getTime() - d.getTime();
+		const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
+
+		if (diffHrs < 24) {
+			if (diffHrs < 1) return 'Just now';
+			return `${diffHrs} hours ago`;
+		}
+		return d.toLocaleDateString();
+	}
 </script>
 
 <div class="max-w-3xl mx-auto space-y-6 p-4 md:p-6">
@@ -72,11 +37,13 @@
 			<p class="text-base-content/60">Stay updated with latest activities.</p>
 		</div>
 		<div class="flex gap-2">
-			<button class="btn btn-ghost btn-sm" onclick={markAllRead} disabled={unreadCount === 0}>
-				<Check class="w-4 h-4 mr-1" />
-				Mark all read
-			</button>
-			<a href="/notifications/settings" class="btn btn-ghost btn-sm btn-square">
+			<form method="POST" action="?/markAllRead" use:enhance>
+				<button class="btn btn-ghost btn-sm" disabled={unreadCount === 0}>
+					<Check class="w-4 h-4 mr-1" />
+					Mark all read
+				</button>
+			</form>
+			<a href="/admin/notifications/settings" class="btn btn-ghost btn-sm btn-square">
 				<Settings class="w-5 h-5" />
 			</a>
 		</div>
@@ -108,6 +75,10 @@
 								<div class="p-2 bg-warning/10 text-warning rounded-full">
 									<AlertTriangle class="w-5 h-5" />
 								</div>
+							{:else if notification.type === 'error'}
+								<div class="p-2 bg-error/10 text-error rounded-full">
+									<AlertTriangle class="w-5 h-5" />
+								</div>
 							{/if}
 						</div>
 						<div class="flex-1 min-w-0">
@@ -120,28 +91,29 @@
 									{notification.title}
 								</h3>
 								<span class="text-xs text-base-content/50 whitespace-nowrap ml-2"
-									>{notification.time}</span
+									>{formatDate(notification.createdAt)}</span
 								>
 							</div>
 							<p class="text-sm text-base-content/70 mt-1">{notification.message}</p>
 						</div>
 						<div class="flex flex-col gap-1">
 							{#if !notification.read}
-								<button
-									class="btn btn-ghost btn-xs btn-circle text-primary"
-									onclick={() => markAsRead(notification.id)}
-									title="Mark as read"
-								>
-									<div class="w-2 h-2 bg-primary rounded-full"></div>
-								</button>
+								<form method="POST" action="?/markRead" use:enhance>
+									<input type="hidden" name="id" value={notification.id} />
+									<button class="btn btn-ghost btn-xs btn-circle text-primary" title="Mark as read">
+										<div class="w-2 h-2 bg-primary rounded-full"></div>
+									</button>
+								</form>
 							{/if}
-							<button
-								class="btn btn-ghost btn-xs btn-circle text-error opacity-0 group-hover:opacity-100 transition-opacity"
-								onclick={() => deleteNotification(notification.id)}
-								title="Delete"
-							>
-								<Trash2 class="w-4 h-4" />
-							</button>
+							<form method="POST" action="?/delete" use:enhance>
+								<input type="hidden" name="id" value={notification.id} />
+								<button
+									class="btn btn-ghost btn-xs btn-circle text-error opacity-0 group-hover:opacity-100 transition-opacity"
+									title="Delete"
+								>
+									<Trash2 class="w-4 h-4" />
+								</button>
+							</form>
 						</div>
 					</div>
 				</div>

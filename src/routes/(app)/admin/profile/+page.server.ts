@@ -6,7 +6,7 @@ import { db } from '$lib/server/db';
 import * as table from '$lib/server/db/schema';
 import { eq, desc, count } from 'drizzle-orm';
 import { logAudit } from '$lib/server/audit';
-import { lucia } from '$lib/server/auth';
+import { invalidateSession } from '$lib/server/auth';
 import { verify, hash } from '@node-rs/argon2';
 
 export const load = async ({ locals }) => {
@@ -131,19 +131,17 @@ export const actions = {
 				})
 				.where(eq(table.user.id, locals.user.id));
 
-			// Invalidate all other sessions
-			await lucia.invalidateUserSessions(locals.user.id);
+			// Invalidate all user sessions except current one
+			const allSessions = await db
+				.select()
+				.from(table.session)
+				.where(eq(table.session.userId, locals.user.id));
 
-			// Create new session for current user to keep them logged in
-			const session = await lucia.createSession(locals.user.id, {});
-			lucia.createSessionCookie(session.id);
-
-			// We can't set cookie here directly in action return, but Lucia handles it usually via hooks
-			// However, since we invalidated all sessions, we might need to re-login or handle it.
-			// For simplicity, let's just log the audit and let the user re-login if needed,
-			// or better, only invalidate OTHER sessions if we could.
-			// Lucia's invalidateUserSessions kills ALL.
-			// Let's just log audit for now.
+			for (const session of allSessions) {
+				if (session.id !== locals.session?.id) {
+					await invalidateSession(session.id);
+				}
+			}
 
 			await logAudit(locals.user.id, 'UPDATE', 'user', locals.user.id, {
 				newValues: { passwordChanged: true }
@@ -162,7 +160,7 @@ export const actions = {
 		const sessionId = String(formData.get('sessionId'));
 
 		try {
-			await lucia.invalidateSession(sessionId);
+			await invalidateSession(sessionId);
 			await logAudit(locals.user.id, 'DELETE', 'session', sessionId);
 			return { success: true, message: 'Session revoked' };
 		} catch (error) {
@@ -173,12 +171,8 @@ export const actions = {
 
 	signOut: async ({ locals, cookies }) => {
 		if (!locals.session) return fail(401);
-		await lucia.invalidateSession(locals.session.id);
-		const sessionCookie = lucia.createBlankSessionCookie();
-		cookies.set(sessionCookie.name, sessionCookie.value, {
-			path: '.',
-			...sessionCookie.attributes
-		});
+		await invalidateSession(locals.session.id);
+		cookies.delete('auth-session', { path: '/' });
 		throw redirect(302, '/auth/login');
 	}
 };

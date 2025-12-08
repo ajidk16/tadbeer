@@ -5,13 +5,10 @@
 		Plus,
 		Megaphone,
 		Calendar,
-		MessageCircle,
 		Trash2,
 		SquarePen,
-		Bell,
 		Mic2,
 		Radio,
-		Clock,
 		Save
 	} from 'lucide-svelte';
 
