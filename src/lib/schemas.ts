@@ -200,6 +200,17 @@ export const lendingSchema = v.object({
 
 export type LendingSchema = typeof lendingSchema;
 
+export const publicBorrowSchema = v.object({
+	assetId: v.pipe(v.number('Pilih aset'), v.minValue(1, 'Pilih aset yang valid')),
+	borrowerName: v.pipe(v.string(), v.minLength(3, 'Nama peminjam wajib diisi')),
+	borrowerContact: v.pipe(v.string(), v.minLength(10, 'Nomor HP minimal 10 digit')),
+	borrowDate: v.pipe(v.string(), v.minLength(1, 'Tanggal pinjam wajib diisi')),
+	returnDate: v.pipe(v.string(), v.minLength(1, 'Tanggal kembali wajib diisi')),
+	notes: v.optional(v.string())
+});
+
+export type PublicBorrowSchema = typeof publicBorrowSchema;
+
 export const maintenanceSchema = v.object({
 	id: v.optional(v.number()),
 	assetId: v.pipe(v.number('Pilih aset'), v.minValue(1, 'Pilih aset yang valid')),
@@ -243,3 +254,24 @@ export const notificationSettingsSchema = v.object({
 });
 
 export type NotificationSettingsSchema = typeof notificationSettingsSchema;
+
+export const quickDonationSchema = v.object({
+	campaignId: v.optional(v.number()),
+	amount: v.pipe(
+		v.number('Nominal harus berupa angka'),
+		v.minValue(10000, 'Minimal donasi Rp 10.000')
+	),
+	donorName: v.optional(v.string()),
+	donorPhone: v.optional(v.string()),
+	paymentMethod: v.pipe(v.string(), v.minLength(1, 'Pilih metode pembayaran'))
+});
+
+export type QuickDonationSchema = typeof quickDonationSchema;
+
+export const donationCommentSchema = v.object({
+	campaignId: v.number('Campaign ID harus berupa angka'),
+	name: v.pipe(v.string(), v.minLength(2, 'Nama minimal 2 karakter')),
+	message: v.pipe(v.string(), v.minLength(5, 'Pesan minimal 5 karakter'))
+});
+
+export type DonationCommentSchema = typeof donationCommentSchema;

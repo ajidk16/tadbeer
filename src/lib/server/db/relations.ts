@@ -7,6 +7,7 @@ import {
 	member,
 	donation,
 	donationCampaign,
+	donationComment,
 	announcement,
 	auditLog,
 	roles,
@@ -56,7 +57,8 @@ export const memberRelations = relations(member, ({ one }) => ({
 }));
 
 export const donationCampaignRelations = relations(donationCampaign, ({ many }) => ({
-	donations: many(donation)
+	donations: many(donation),
+	comments: many(donationComment)
 }));
 
 export const donationRelations = relations(donation, ({ one }) => ({
@@ -67,6 +69,13 @@ export const donationRelations = relations(donation, ({ one }) => ({
 	verifier: one(user, {
 		fields: [donation.verifiedBy],
 		references: [user.id]
+	})
+}));
+
+export const donationCommentRelations = relations(donationComment, ({ one }) => ({
+	campaign: one(donationCampaign, {
+		fields: [donationComment.campaignId],
+		references: [donationCampaign.id]
 	})
 }));
 

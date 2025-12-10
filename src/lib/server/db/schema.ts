@@ -294,6 +294,20 @@ export const donation = pgTable('donation', {
 });
 
 /**
+ * Donation Comments / Wishes
+ */
+export const donationComment = pgTable('donation_comment', {
+	id: serial('id').primaryKey(),
+	campaignId: integer('campaign_id')
+		.references(() => donationCampaign.id)
+		.notNull(),
+	name: text('name').notNull(),
+	message: text('message').notNull(),
+	amount: decimal('amount', { precision: 15, scale: 2 }), // Optional: show donation amount
+	createdAt: timestamp('created_at').defaultNow().notNull()
+});
+
+/**
  * Announcements / Informasi
  */
 export const announcement = pgTable('announcement', {

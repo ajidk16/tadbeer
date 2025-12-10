@@ -1,75 +1,36 @@
 <script lang="ts">
-	import { Search, Filter, Package, Info, ArrowRight } from 'lucide-svelte';
-	import { Badge } from '$lib/components/ui';
+	import { Search, Package, ArrowRight, X, Calendar, User, Phone, FileText } from 'lucide-svelte';
+	import { Badge, Toast, success as toastSuccess, error as toastError } from '$lib/components/ui';
+	import { page } from '$app/state';
+	import { superForm } from 'sveltekit-superforms';
 
-	// Mock Data
-	const assets = [
-		{
-			id: 1,
-			name: 'Karpet Sajadah Premium',
-			category: 'Perlengkapan',
-			stock: 50,
-			available: 45,
-			image:
-				'https://images.unsplash.com/photo-1584551246679-0daf3d275d0f?w=800&auto=format&fit=crop&q=60',
-			condition: 'good'
-		},
-		{
-			id: 2,
-			name: 'Sound System Portable',
-			category: 'Elektronik',
-			stock: 2,
-			available: 1,
-			image:
-				'https://images.unsplash.com/photo-1524678606372-987d7e66c454?w=800&auto=format&fit=crop&q=60',
-			condition: 'good'
-		},
-		{
-			id: 3,
-			name: 'Tenda Lipat 3x3',
-			category: 'Perlengkapan',
-			stock: 10,
-			available: 0,
-			image:
-				'https://images.unsplash.com/photo-1565061828011-282424b9ab2a?w=800&auto=format&fit=crop&q=60',
-			condition: 'maintenance'
-		},
-		{
-			id: 4,
-			name: 'Kursi Lipat Chitose',
-			category: 'Furniture',
-			stock: 100,
-			available: 80,
-			image:
-				'https://images.unsplash.com/photo-1503602642458-2321114458ed?w=800&auto=format&fit=crop&q=60',
-			condition: 'good'
-		},
-		{
-			id: 5,
-			name: 'Proyektor Epson',
-			category: 'Elektronik',
-			stock: 3,
-			available: 3,
-			image:
-				'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=800&auto=format&fit=crop&q=60',
-			condition: 'good'
-		},
-		{
-			id: 6,
-			name: 'Meja Mengaji Anak',
-			category: 'Furniture',
-			stock: 30,
-			available: 25,
-			image:
-				'https://images.unsplash.com/photo-1505409627996-766595d95204?w=800&auto=format&fit=crop&q=60',
-			condition: 'good'
+	// Get data from server
+	const assets = $derived(page.data.assets);
+	const categories = $derived(page.data.categories);
+
+	const {
+		form: borrowFormData,
+		errors: borrowErrors,
+		enhance: borrowEnhance,
+		delayed: borrowDelayed,
+		reset: resetBorrowForm
+	} = superForm(page.data.form, {
+		onResult: ({ result }) => {
+			if (result.type === 'success' && result.data?.success) {
+				toastSuccess('Pengajuan peminjaman berhasil! Kami akan menghubungi Anda.');
+				showBorrowModal = false;
+				selectedAsset = null;
+				resetBorrowForm();
+			} else if (result.type === 'failure') {
+				toastError(result.data?.message || 'Gagal mengajukan peminjaman');
+			}
 		}
-	];
+	});
 
 	let searchQuery = $state('');
 	let selectedCategory = $state('Semua');
-
-	const categories = ['Semua', 'Perlengkapan', 'Elektronik', 'Furniture'];
+	let showBorrowModal = $state(false);
+	let selectedAsset = $state<(typeof assets)[0] | null>(null);
 
 	const filteredAssets = $derived(
 		assets.filter((asset) => {
@@ -78,11 +39,19 @@
 			return matchesSearch && matchesCategory;
 		})
 	);
+
+	function openBorrowModal(asset: (typeof assets)[0]) {
+		selectedAsset = asset;
+		$borrowFormData.assetId = asset.id;
+		showBorrowModal = true;
+	}
 </script>
 
 <svelte:head>
 	<title>Inventaris Masjid | TadBeer</title>
 </svelte:head>
+
+<Toast />
 
 <div class="container mx-auto px-4 py-8 pb-24 md:pb-8">
 	<!-- Header -->
@@ -161,7 +130,11 @@
 					</div>
 
 					<div class="card-actions">
-						<button class="btn btn-primary btn-sm w-full" disabled={asset.available === 0}>
+						<button
+							class="btn btn-primary btn-sm w-full"
+							disabled={asset.available === 0}
+							onclick={() => openBorrowModal(asset)}
+						>
 							Ajukan Peminjaman
 							<ArrowRight class="w-4 h-4" />
 						</button>
@@ -181,3 +154,146 @@
 		</div>
 	{/if}
 </div>
+
+<!-- Borrow Modal -->
+<dialog class="modal modal-bottom sm:modal-middle" class:modal-open={showBorrowModal}>
+	<div class="modal-box p-0 overflow-hidden max-w-lg">
+		<!-- Header -->
+		<div class="bg-gradient-to-r from-primary to-secondary text-primary-content p-6">
+			<button
+				class="btn btn-sm btn-circle btn-ghost absolute right-3 top-3 text-white/70 hover:text-white"
+				onclick={() => (showBorrowModal = false)}
+			>
+				<X class="w-5 h-5" />
+			</button>
+			<h3 class="font-bold text-xl flex items-center gap-2">
+				<Package class="w-6 h-6" />
+				Ajukan Peminjaman
+			</h3>
+			{#if selectedAsset}
+				<p class="text-primary-content/80 text-sm mt-1">{selectedAsset.name}</p>
+			{/if}
+		</div>
+
+		<form method="POST" action="?/borrow" use:borrowEnhance class="p-6 space-y-5">
+			<input type="hidden" name="assetId" value={selectedAsset?.id || 0} />
+
+			<!-- Borrower Info -->
+			<div class="space-y-4">
+				<div class="form-control">
+					<label class="label" for="borrowerName">
+						<span class="label-text font-medium flex items-center gap-2">
+							<User class="w-4 h-4" /> Nama Peminjam
+						</span>
+					</label>
+					<input
+						type="text"
+						id="borrowerName"
+						name="borrowerName"
+						placeholder="Nama lengkap"
+						class="input input-bordered"
+						bind:value={$borrowFormData.borrowerName}
+					/>
+					{#if $borrowErrors.borrowerName}
+						<span class="text-error text-xs mt-1">{$borrowErrors.borrowerName}</span>
+					{/if}
+				</div>
+
+				<div class="form-control">
+					<label class="label" for="borrowerContact">
+						<span class="label-text font-medium flex items-center gap-2">
+							<Phone class="w-4 h-4" /> Nomor HP / WhatsApp
+						</span>
+					</label>
+					<input
+						type="tel"
+						id="borrowerContact"
+						name="borrowerContact"
+						placeholder="08xx-xxxx-xxxx"
+						class="input input-bordered"
+						bind:value={$borrowFormData.borrowerContact}
+					/>
+					{#if $borrowErrors.borrowerContact}
+						<span class="text-error text-xs mt-1">{$borrowErrors.borrowerContact}</span>
+					{/if}
+				</div>
+			</div>
+
+			<!-- Date Range -->
+			<div class="grid grid-cols-2 gap-4">
+				<div class="form-control">
+					<label class="label" for="borrowDate">
+						<span class="label-text font-medium flex items-center gap-2">
+							<Calendar class="w-4 h-4" /> Tanggal Pinjam
+						</span>
+					</label>
+					<input
+						type="date"
+						id="borrowDate"
+						name="borrowDate"
+						class="input input-bordered"
+						bind:value={$borrowFormData.borrowDate}
+					/>
+					{#if $borrowErrors.borrowDate}
+						<span class="text-error text-xs mt-1">{$borrowErrors.borrowDate}</span>
+					{/if}
+				</div>
+
+				<div class="form-control">
+					<label class="label" for="returnDate">
+						<span class="label-text font-medium flex items-center gap-2">
+							<Calendar class="w-4 h-4" /> Tanggal Kembali
+						</span>
+					</label>
+					<input
+						type="date"
+						id="returnDate"
+						name="returnDate"
+						class="input input-bordered"
+						bind:value={$borrowFormData.returnDate}
+					/>
+					{#if $borrowErrors.returnDate}
+						<span class="text-error text-xs mt-1">{$borrowErrors.returnDate}</span>
+					{/if}
+				</div>
+			</div>
+
+			<!-- Notes -->
+			<div class="form-control">
+				<label class="label" for="notes">
+					<span class="label-text font-medium flex items-center gap-2">
+						<FileText class="w-4 h-4" /> Catatan (Opsional)
+					</span>
+				</label>
+				<textarea
+					id="notes"
+					name="notes"
+					placeholder="Keperluan peminjaman, jumlah unit, dll..."
+					class="textarea textarea-bordered"
+					rows="2"
+					bind:value={$borrowFormData.notes}
+				></textarea>
+			</div>
+
+			<!-- Submit -->
+			<div class="flex gap-3 pt-2">
+				<button
+					type="button"
+					class="btn btn-ghost flex-1"
+					onclick={() => (showBorrowModal = false)}
+				>
+					Batal
+				</button>
+				<button type="submit" class="btn btn-primary flex-1" disabled={$borrowDelayed}>
+					{#if $borrowDelayed}
+						<span class="loading loading-spinner loading-sm"></span>
+					{/if}
+					Ajukan
+				</button>
+			</div>
+		</form>
+	</div>
+	<form method="dialog" class="modal-backdrop bg-black/50">
+		<button onclick={() => (showBorrowModal = false)}>close</button>
+	</form>
+</dialog>

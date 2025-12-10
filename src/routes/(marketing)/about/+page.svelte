@@ -1,32 +1,10 @@
 <script lang="ts">
 	import { MapPin, Phone, Mail, Clock, User, Users, Award, BookOpen, Heart } from 'lucide-svelte';
+	import { page } from '$app/state';
 
-	const dkmStructure = [
-		{
-			role: 'Ketua DKM',
-			name: 'H. Ahmad Dahlan',
-			image:
-				'https://images.unsplash.com/photo-1566492031773-4f4e44671857?w=800&auto=format&fit=crop&q=60'
-		},
-		{
-			role: 'Sekretaris',
-			name: 'Ustadz Fatih',
-			image:
-				'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&auto=format&fit=crop&q=60'
-		},
-		{
-			role: 'Bendahara',
-			name: 'Bapak Irwan',
-			image:
-				'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=800&auto=format&fit=crop&q=60'
-		},
-		{
-			role: 'Koordinator Ibadah',
-			name: 'Ustadz Zulkifli',
-			image:
-				'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=800&auto=format&fit=crop&q=60'
-		}
-	];
+	// Get data from server
+	const profile = $derived(page.data.profile);
+	const dkmStructure = $derived(page.data.dkmStructure);
 
 	const facilities = [
 		{ icon: BookOpen, title: 'Perpustakaan Islam', desc: 'Koleksi buku agama lengkap' },
@@ -49,7 +27,7 @@
 		<div class="container mx-auto px-4 relative z-10">
 			<h1 class="text-4xl font-bold text-primary mb-4">Profil Masjid</h1>
 			<p class="text-xl text-base-content/70 max-w-2xl mx-auto">
-				Menjadi pusat peradaban umat yang memakmurkan dan dimakmurkan masjid.
+				{profile?.vision || 'Menjadi pusat peradaban umat yang memakmurkan dan dimakmurkan masjid.'}
 			</p>
 		</div>
 	</div>
@@ -59,22 +37,29 @@
 		<div class="grid md:grid-cols-2 gap-12 items-center">
 			<div class="space-y-6">
 				<h2 class="text-3xl font-bold text-primary">Sejarah Singkat</h2>
-				<p class="text-base-content/80 leading-relaxed">
-					Masjid TadBeer didirikan pada tahun 2010 atas inisiatif warga setempat yang merindukan
-					tempat ibadah yang nyaman dan representatif. Berawal dari sebuah musholla kecil, kini
-					telah berkembang menjadi pusat kegiatan keagamaan dan sosial kemasyarakatan.
-				</p>
-				<p class="text-base-content/80 leading-relaxed">
-					Dengan arsitektur yang memadukan nilai tradisional dan modern, masjid ini tidak hanya
-					menjadi tempat sholat, tetapi juga pusat pendidikan, dakwah, dan pemberdayaan ekonomi
-					umat.
-				</p>
+				{#if profile?.history}
+					<p class="text-base-content/80 leading-relaxed whitespace-pre-line">
+						{profile.history}
+					</p>
+				{:else}
+					<p class="text-base-content/80 leading-relaxed">
+						Masjid TadBeer didirikan pada tahun 2010 atas inisiatif warga setempat yang merindukan
+						tempat ibadah yang nyaman dan representatif. Berawal dari sebuah musholla kecil, kini
+						telah berkembang menjadi pusat kegiatan keagamaan dan sosial kemasyarakatan.
+					</p>
+					<p class="text-base-content/80 leading-relaxed">
+						Dengan arsitektur yang memadukan nilai tradisional dan modern, masjid ini tidak hanya
+						menjadi tempat sholat, tetapi juga pusat pendidikan, dakwah, dan pemberdayaan ekonomi
+						umat.
+					</p>
+				{/if}
 			</div>
 			<div
 				class="relative h-80 rounded-2xl overflow-hidden shadow-xl rotate-2 hover:rotate-0 transition-transform duration-500"
 			>
 				<img
-					src="https://images.unsplash.com/photo-1564121211835-e88c852648ab?w=800&auto=format&fit=crop&q=60"
+					src={profile?.image ||
+						'https://images.unsplash.com/photo-1564121211835-e88c852648ab?w=800&auto=format&fit=crop&q=60'}
 					alt="Masjid Architecture"
 					class="w-full h-full object-cover"
 				/>
@@ -115,7 +100,7 @@
 					</div>
 					<h3 class="text-xl font-bold">Sosial</h3>
 					<p class="text-base-content/70">
-						Memberdayakan potensi umat untuk kesejahteraan bersama.
+						{profile?.mission || 'Memberdayakan potensi umat untuk kesejahteraan bersama.'}
 					</p>
 				</div>
 			</div>
@@ -162,7 +147,9 @@
 						</div>
 						<div>
 							<div class="font-bold">Alamat</div>
-							<div class="text-sm opacity-70">Jl. Masjid No. 1, Kota Santri, 12345</div>
+							<div class="text-sm opacity-70">
+								{profile?.address || 'Jl. Masjid No. 1, Kota Santri, 12345'}
+							</div>
 						</div>
 					</div>
 					<div class="flex items-center gap-4">
@@ -173,7 +160,7 @@
 						</div>
 						<div>
 							<div class="font-bold">Telepon / WhatsApp</div>
-							<div class="text-sm opacity-70">+62 812-3456-7890</div>
+							<div class="text-sm opacity-70">{profile?.phone || '+62 812-3456-7890'}</div>
 						</div>
 					</div>
 					<div class="flex items-center gap-4">
@@ -184,7 +171,7 @@
 						</div>
 						<div>
 							<div class="font-bold">Email</div>
-							<div class="text-sm opacity-70">info@TadBeer.com</div>
+							<div class="text-sm opacity-70">{profile?.email || 'info@TadBeer.com'}</div>
 						</div>
 					</div>
 				</div>
