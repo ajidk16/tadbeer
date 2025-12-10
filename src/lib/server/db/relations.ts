@@ -3,7 +3,6 @@ import {
 	user,
 	session,
 	financialTransaction,
-	event,
 	member,
 	donation,
 	donationCampaign,
@@ -15,7 +14,8 @@ import {
 	assetLending,
 	assetMaintenance,
 	notification,
-	userSettings
+	userSettings,
+	eventAttendance
 } from './schema';
 
 export const userRelations = relations(user, ({ many, one }) => ({
@@ -49,11 +49,12 @@ export const financialTransactionRelations = relations(financialTransaction, ({ 
 	})
 }));
 
-export const memberRelations = relations(member, ({ one }) => ({
+export const memberRelations = relations(member, ({ one, many }) => ({
 	user: one(user, {
 		fields: [member.userId],
 		references: [user.id]
-	})
+	}),
+	attendance: many(eventAttendance)
 }));
 
 export const donationCampaignRelations = relations(donationCampaign, ({ many }) => ({

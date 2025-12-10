@@ -3,7 +3,8 @@ import * as auth from '$lib/server/auth';
 import type { Handle } from '@sveltejs/kit';
 import { paraglideMiddleware } from '$lib/paraglide/server';
 import { db } from '$lib/server/db';
-import * as table from '$lib/server/db/schema';
+import { protectedRoute } from '$lib/server/db/schema';
+
 
 const handleParaglide: Handle = ({ event, resolve }) =>
 	paraglideMiddleware(event.request, ({ request, locale }) => {
@@ -79,9 +80,9 @@ async function getProtectedRoutes() {
 	const now = Date.now();
 	if (!cachedRoutes || now - lastFetch > CACHE_TTL) {
 		// Fetch from DB
-		const routes = await db.select().from(table.protectedRoute);
+		const routes = await db.select().from(protectedRoute);
 		// Map to simpler structure if needed, but schema matches
-		cachedRoutes = routes.map((r) => ({ prefix: r.prefix, roles: r.roles }));
+		cachedRoutes = routes.map((r) => ({ prefix: r?.prefix, roles: r?.roles }));
 		lastFetch = now;
 	}
 	return cachedRoutes;

@@ -11,18 +11,11 @@
 		SquarePen,
 		Trash2,
 		X,
-		Save,
 		ChevronLeft,
 		ChevronRight,
 		Bell,
-		ClipboardCheck,
-		CheckCircle2,
-		XCircle,
-		MinusCircle
+		ClipboardCheck
 	} from 'lucide-svelte';
-	import { superForm } from 'sveltekit-superforms';
-	import { valibotClient } from 'sveltekit-superforms/adapters';
-	import { eventSchema } from '$lib/schemas';
 	import { page } from '$app/state';
 
 	// View mode
@@ -38,42 +31,13 @@
 	let currentYear = $state(new Date().getFullYear());
 
 	// Modal states
-	let showFormModal = $state(false);
 	let showDetailModal = $state(false);
 	let showDeleteModal = $state(false);
 	let showAbsensiModal = $state(false);
-	let isEditMode = $state(false);
-	let selectedEvent = $state<any>(null); // Use any to avoid complex type mapping for now
-
-	// Superform
-	const {
-		form,
-		errors,
-		constraints,
-		enhance: superEnhance,
-		delayed,
-		message
-	} = superForm(page.data.form, {
-		validators: valibotClient(eventSchema),
-		onResult: ({ result }) => {
-			if (result.type === 'success') {
-				toastSuccess(isEditMode ? 'Kegiatan berhasil diperbarui' : 'Kegiatan berhasil ditambahkan');
-				closeFormModal();
-			} else if (result.type === 'failure') {
-				toastError('Gagal menyimpan kegiatan. Periksa input Anda.');
-			}
-		}
-	});
+	let selectedEvent = $state<any>(null);
 
 	// Attendance state
-	// Initialize with members map
-	let attendanceList = $state(
-		(page.data.members || []).map((m: { id: string; fullName: string }) => ({
-			id: m.id.toString(),
-			name: m.fullName,
-			status: 'present' // Default
-		}))
-	);
+	let attendanceList = $state<any[]>([]);
 
 	const categories = ['Pengajian', 'Kajian', 'Sholat Jumat', 'Kegiatan Sosial', 'Rapat', 'Lainnya'];
 	const monthNames = [
@@ -170,45 +134,6 @@
 		return map[status] || status;
 	}
 
-	function openAddModal(dateStr?: string) {
-		isEditMode = false;
-		selectedEvent = null;
-		form.set({
-			id: undefined,
-			title: '',
-			category: '',
-			date: dateStr || new Date().toISOString().split('T')[0],
-			time: '',
-			endTime: '',
-			location: '',
-			description: '',
-			capacity: '0'
-		});
-		showFormModal = true;
-	}
-
-	function openEditModal(event: any) {
-		isEditMode = true;
-		selectedEvent = event;
-		form.set({
-			id: event.id,
-			title: event.title,
-			category: event.category, // Ensure mapping matches frontend options
-			date: event.date.split('T')[0],
-			time: event.time,
-			endTime: event.endTime,
-			location: event.location || '',
-			description: event.description || '',
-			capacity: (event.capacity || 0).toString()
-		});
-		showFormModal = true;
-	}
-
-	function closeFormModal() {
-		showFormModal = false;
-		selectedEvent = null;
-	}
-
 	function openDetail(event: any) {
 		selectedEvent = event;
 		showDetailModal = true;
@@ -239,27 +164,41 @@
 	function openAbsensi(event: any) {
 		selectedEvent = event;
 
+		// Create lookup maps for O(1) access
+		const attendanceByMemberId = new Map();
+		const attendanceByName = new Map();
+
+		(page.data.eventAttendance || []).forEach((a: any) => {
+			if (a.eventId === event.id) {
+				if (a.memberId) {
+					attendanceByMemberId.set(a.memberId, a.status);
+				} else {
+					attendanceByName.set(a.name, a.status);
+				}
+			}
+		});
+
+		// Get event registrations (guests)
 		const eventRegistrants = (page.data.registrations || []).filter(
 			(r: any) => r.eventId === event.id
 		);
 
+		// Map guests with their attendance status
 		const guests = eventRegistrants.map((r: any) => ({
 			id: `guest_${r.id}`,
 			realId: r.id,
 			name: `${r.name} (Tamu)`,
-			status: 'present',
+			status: attendanceByName.get(r.name) || 'present',
 			type: 'guest',
 			phone: r.phone
 		}));
 
-		// Initialize with members map
-		// In real app, we should probably fetch *existing* attendance from DB first to preserve status
-		// But for now, we recreate list.
+		// Map members with their attendance status
 		const members = (page.data.members || []).map((m: any) => ({
 			id: `member_${m.id}`,
 			realId: m.id,
 			name: m.fullName,
-			status: 'present',
+			status: attendanceByMemberId.get(m.id) || 'present',
 			type: 'member'
 		}));
 
@@ -310,10 +249,10 @@
 					📅 Kalender
 				</button>
 			</div>
-			<button class="btn btn-primary btn-sm" onclick={() => openAddModal()}>
+			<a href="/admin/kegiatan/form" class="btn btn-primary btn-sm">
 				<Plus class="w-4 h-4" />
 				Tambah
-			</button>
+			</a>
 		</div>
 	</div>
 
@@ -384,9 +323,9 @@
 										>
 									</li>
 									<li>
-										<button onclick={() => openEditModal(event)}
-											><SquarePen class="w-4 h-4" /> Edit</button
-										>
+										<a href="/admin/kegiatan/form/{event.id}">
+											<SquarePen class="w-4 h-4" /> Edit
+										</a>
 									</li>
 									<li>
 										<button class="text-error" onclick={() => openDelete(event)}
@@ -460,18 +399,18 @@
 							tabindex="0"
 							onclick={() => {
 								if (day) {
-									const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-									// Check if click was on an event button (propagation should handle this if buttons engage bubbling, but let's be safe or just let user click background)
-									// Actually, if we click the event button, that handler fires. If we click the div, this fires.
-									// But event button click might propagate. We should stop propagation on event buttons.
-									openAddModal(dateStr);
+									// Navigate to new form with prepopulated date?
+									// Currently form supports NO query params in my simple implementation,
+									// but I can add it later if needed. For now just link to form.
+									// Or maybe add ?date=...
+									// Let's just go to form page.
+									window.location.href = '/admin/kegiatan/form';
 								}
 							}}
 							onkeydown={(e) => {
 								if (e.key === 'Enter' || e.key === ' ') {
 									if (day) {
-										const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-										openAddModal(dateStr);
+										window.location.href = '/admin/kegiatan/form';
 									}
 								}
 							}}
@@ -502,149 +441,6 @@
 		</div>
 	{/if}
 </div>
-
-<!-- Add/Edit Modal -->
-{#if showFormModal}
-	<dialog class="modal modal-open">
-		<div class="modal-box max-w-lg">
-			<button
-				class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2"
-				onclick={closeFormModal}
-			>
-				<X class="w-4 h-4" />
-			</button>
-
-			<h3 class="font-bold text-lg mb-4">
-				{isEditMode ? '✏️ Edit Kegiatan' : '➕ Tambah Kegiatan'}
-			</h3>
-
-			<form
-				method="POST"
-				action={isEditMode ? '?/update' : '?/create'}
-				use:superEnhance
-				class="space-y-4"
-			>
-				{#if isEditMode && selectedEvent}
-					<input type="hidden" name="id" value={selectedEvent.id} />
-				{/if}
-
-				<div class="form-control">
-					<label for="title" class="label"><span class="label-text">Judul Kegiatan *</span></label>
-					<input
-						type="text"
-						name="title"
-						class="input input-bordered w-full {$errors.title ? 'input-error' : ''}"
-						placeholder="Contoh: Kajian Malam Jumat"
-						bind:value={$form.title}
-						{...$constraints.title}
-					/>
-					{#if $errors.title}<span class="text-error text-xs mt-1">{$errors.title}</span>{/if}
-				</div>
-
-				<div class="grid grid-cols-2 gap-4">
-					<div class="form-control">
-						<label for="category" class="label"><span class="label-text">Kategori *</span></label>
-						<select
-							name="category"
-							class="select select-bordered w-full {$errors.category ? 'select-error' : ''}"
-							bind:value={$form.category}
-							{...$constraints.category}
-						>
-							<option value="" disabled selected={!$form.category}>Pilih</option>
-							{#each categories as cat}
-								<option value={cat}>{cat}</option>
-							{/each}
-						</select>
-						{#if $errors.category}<span class="text-error text-xs mt-1">{$errors.category}</span
-							>{/if}
-					</div>
-					<div class="form-control">
-						<label for="date" class="label"><span class="label-text">Tanggal *</span></label>
-						<input
-							type="date"
-							name="date"
-							class="input input-bordered w-full {$errors.date ? 'input-error' : ''}"
-							bind:value={$form.date}
-							{...$constraints.date}
-						/>
-						{#if $errors.date}<span class="text-error text-xs mt-1">{$errors.date}</span>{/if}
-					</div>
-				</div>
-
-				<div class="grid grid-cols-2 gap-4">
-					<div class="form-control">
-						<label for="time" class="label"><span class="label-text">Waktu Mulai *</span></label>
-						<input
-							type="time"
-							name="time"
-							class="input input-bordered w-full {$errors.time ? 'input-error' : ''}"
-							bind:value={$form.time}
-							{...$constraints.time}
-						/>
-						{#if $errors.time}<span class="text-error text-xs mt-1">{$errors.time}</span>{/if}
-					</div>
-					<div class="form-control">
-						<label for="endTime" class="label"><span class="label-text">Waktu Selesai</span></label>
-						<input
-							type="time"
-							name="endTime"
-							class="input input-bordered w-full"
-							bind:value={$form.endTime}
-						/>
-					</div>
-				</div>
-
-				<div class="grid grid-cols-2 gap-4">
-					<div class="form-control">
-						<label for="location" class="label"><span class="label-text">Lokasi</span></label>
-						<input
-							type="text"
-							name="location"
-							class="input input-bordered w-full"
-							placeholder="Masjid Al-Ikhlas"
-							bind:value={$form.location}
-						/>
-					</div>
-					<div class="form-control">
-						<label for="capacity" class="label"><span class="label-text">Kapasitas</span></label>
-						<input
-							type="number"
-							name="capacity"
-							class="input input-bordered w-full"
-							placeholder="100"
-							bind:value={$form.capacity}
-						/>
-					</div>
-				</div>
-
-				<div class="form-control">
-					<label for="description" class="label"><span class="label-text">Deskripsi</span></label>
-					<textarea
-						name="description"
-						class="textarea textarea-bordered w-full"
-						rows="3"
-						placeholder="Deskripsi kegiatan..."
-						bind:value={$form.description}
-					></textarea>
-				</div>
-
-				<div class="modal-action">
-					<button type="button" class="btn btn-ghost" onclick={closeFormModal}>Batal</button>
-					<button type="submit" class="btn btn-primary" disabled={$delayed}>
-						{#if $delayed}
-							<span class="loading loading-spinner loading-sm"></span>
-						{:else}
-							<Save class="w-4 h-4" />{/if}
-						Simpan
-					</button>
-				</div>
-			</form>
-		</div>
-		<form method="dialog" class="modal-backdrop">
-			<button onclick={closeFormModal}>close</button>
-		</form>
-	</dialog>
-{/if}
 
 <!-- Detail Modal -->
 {#if showDetailModal && selectedEvent}
@@ -713,15 +509,9 @@
 					</button>
 				</div>
 				<div class="flex gap-2">
-					<button
-						class="btn btn-primary btn-sm"
-						onclick={() => {
-							showDetailModal = false;
-							openEditModal(selectedEvent!);
-						}}
-					>
+					<a href="/admin/kegiatan/form/{selectedEvent.id}" class="btn btn-primary btn-sm">
 						<SquarePen class="w-4 h-4" /> Edit
-					</button>
+					</a>
 					<button
 						class="btn btn-ghost btn-sm"
 						onclick={() => {
@@ -791,95 +581,45 @@
 			>
 				<X class="w-4 h-4" />
 			</button>
+			<h3 class="font-bold text-lg">Absensi Peserta</h3>
+			<p class="text-sm text-base-content/60 mb-4">{selectedEvent.title}</p>
 
-			<h3 class="font-bold text-lg mb-4">📝 Absensi Kegiatan</h3>
-			<div class="bg-base-200 rounded-lg p-3 mb-4">
-				<p class="font-medium">{selectedEvent.title}</p>
-				<p class="text-sm text-base-content/60">{formatDate(selectedEvent.date)}</p>
+			<div class="max-h-96 overflow-y-auto space-y-2">
+				{#each attendanceList as p (p.id)}
+					<div class="flex items-center justify-between p-2 bg-base-200 rounded-lg">
+						<div>
+							<p class="font-medium">{p.name}</p>
+							<p class="text-xs text-base-content/60 capitalize">
+								{p.type === 'member' ? 'Jamaah' : 'Tamu'}
+							</p>
+						</div>
+						<div class="join">
+							<button
+								class="join-item btn btn-xs {p.status === 'present' ? 'btn-success' : ''}"
+								onclick={() => updateAttendance(p.id, 'present')}>Hadir</button
+							>
+							<button
+								class="join-item btn btn-xs {p.status === 'permission' ? 'btn-warning' : ''}"
+								onclick={() => updateAttendance(p.id, 'permission')}>Izin</button
+							>
+							<button
+								class="join-item btn btn-xs {p.status === 'absent' ? 'btn-error' : ''}"
+								onclick={() => updateAttendance(p.id, 'absent')}>Alfa</button
+							>
+						</div>
+					</div>
+				{/each}
 			</div>
 
-			<form
-				method="POST"
-				action="?/saveAttendance"
-				use:enhance={({ formData }: any) => {
-					formData.append('attendance', JSON.stringify(attendanceList));
-					formData.append('eventId', selectedEvent.id.toString());
-
-					return async ({ result }: any) => {
-						if (result.type === 'success') {
-							toastSuccess('Data absensi berhasil disimpan');
-							showAbsensiModal = false;
-							selectedEvent = null;
-						} else {
-							toastError('Gagal menyimpan absensi');
-						}
-					};
-				}}
-			>
-				<div class="space-y-2 max-h-[300px] overflow-y-auto mb-4">
-					{#each attendanceList as participant (participant.id)}
-						<div
-							class="flex items-center justify-between p-2 hover:bg-base-200 rounded-lg border border-base-200"
-						>
-							<div class="flex items-center gap-3">
-								<div class="avatar placeholder">
-									<div class="bg-neutral text-neutral-content rounded-full w-8">
-										<span class="text-xs">{participant.name.charAt(0)}</span>
-									</div>
-								</div>
-								<span class="font-medium text-sm">{participant.name}</span>
-							</div>
-							<div class="join">
-								<button
-									type="button"
-									class="join-item btn btn-xs {participant.status === 'present'
-										? 'btn-success'
-										: 'btn-ghost'}"
-									onclick={() => updateAttendance(participant.id, 'present')}
-									title="Hadir"
-								>
-									<CheckCircle2 class="w-4 h-4" />
-								</button>
-								<button
-									type="button"
-									class="join-item btn btn-xs {participant.status === 'permission'
-										? 'btn-warning'
-										: 'btn-ghost'}"
-									onclick={() => updateAttendance(participant.id, 'permission')}
-									title="Izin"
-								>
-									<MinusCircle class="w-4 h-4" />
-								</button>
-								<button
-									type="button"
-									class="join-item btn btn-xs {participant.status === 'absent'
-										? 'btn-error'
-										: 'btn-ghost'}"
-									onclick={() => updateAttendance(participant.id, 'absent')}
-									title="Alpha"
-								>
-									<XCircle class="w-4 h-4" />
-								</button>
-							</div>
-						</div>
-					{/each}
-				</div>
-
-				<div class="modal-action">
-					<button
-						type="button"
-						class="btn btn-ghost"
-						onclick={() => {
-							showAbsensiModal = false;
-							selectedEvent = null;
-						}}>Batal</button
+			<div class="modal-action">
+				<form method="POST" action="?/saveAttendance" use:enhance>
+					<input type="hidden" name="eventId" value={selectedEvent.id} />
+					<input type="hidden" name="attendance" value={JSON.stringify(attendanceList)} />
+					<button class="btn btn-primary w-full" onclick={() => (showAbsensiModal = false)}
+						>Simpan Absensi</button
 					>
-					<button type="submit" class="btn btn-primary">
-						<Save class="w-4 h-4" />
-						Simpan Absensi
-					</button>
-				</div>
-			</form>
+				</form>
+			</div>
 		</div>
 	</dialog>
 {/if}

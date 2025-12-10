@@ -133,7 +133,8 @@ export const eventSchema = v.object({
 	location: v.optional(v.string()),
 	description: v.optional(v.string()),
 	capacity: v.optional(v.string()), // Form input is text/number, handle conversion
-	speaker: v.optional(v.string())
+	speaker: v.optional(v.string()),
+	image: v.optional(v.any())
 });
 
 export type EventSchema = typeof eventSchema;
