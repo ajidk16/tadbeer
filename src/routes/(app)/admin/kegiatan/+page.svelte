@@ -304,63 +304,157 @@
 		<!-- Events List -->
 		<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
 			{#each filteredEvents() as event (event.id)}
-				<div class="card bg-base-100 shadow-sm hover:shadow-md transition-shadow">
-					<div class="card-body p-4">
-						<div class="flex justify-between items-start">
-							<Badge variant={getStatusBadge(event.status) as any} size="sm">
-								{getStatusLabel(event.status)}
-							</Badge>
-							<div class="dropdown dropdown-end">
-								<button class="btn btn-ghost btn-xs btn-square">⋮</button>
-								<ul class="dropdown-content menu bg-base-100 rounded-box shadow z-10 w-40 p-1">
-									<li>
-										<button onclick={() => openDetail(event)}><Eye class="w-4 h-4" /> Detail</button
-										>
-									</li>
-									<li>
-										<button onclick={() => openAbsensi(event)}
-											><ClipboardCheck class="w-4 h-4" /> Absensi</button
-										>
-									</li>
-									<li>
-										<a href="/admin/kegiatan/form/{event.id}">
-											<SquarePen class="w-4 h-4" /> Edit
-										</a>
-									</li>
-									<li>
-										<button class="text-error" onclick={() => openDelete(event)}
-											><Trash2 class="w-4 h-4" /> Hapus</button
-										>
-									</li>
-								</ul>
+				<div class="card bg-base-100 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+					<!-- Event Image -->
+					{#if event.imageUrl}
+						<figure class="relative aspect-video w-full overflow-hidden">
+							<img 
+								src={event.imageUrl} 
+								alt={event.title}
+								class="w-full h-full object-cover transition-transform hover:scale-105 duration-300"
+								loading="lazy"
+							/>
+							<div class="absolute top-2 left-2">
+								<Badge variant={getStatusBadge(event.status) as any} size="sm">
+									{getStatusLabel(event.status)}
+								</Badge>
+							</div>
+							<div class="absolute top-2 right-2">
+								<div class="dropdown dropdown-end">
+									<button 
+										class="btn btn-ghost btn-xs btn-square bg-base-100/90 hover:bg-base-100"
+										aria-label="Menu aksi kegiatan"
+									>
+										⋮
+									</button>
+									<ul class="dropdown-content menu bg-base-100 rounded-box shadow-lg z-10 w-44 p-2">
+										<li>
+											<button onclick={() => openDetail(event)}>
+												<Eye class="w-4 h-4" /> Detail
+											</button>
+										</li>
+										<li>
+											<button onclick={() => openAbsensi(event)}>
+												<ClipboardCheck class="w-4 h-4" /> Absensi
+											</button>
+										</li>
+										<li>
+											<a href="/admin/kegiatan/form/{event.id}">
+												<SquarePen class="w-4 h-4" /> Edit
+											</a>
+										</li>
+										<li class="border-t border-base-200 mt-1 pt-1">
+											<button class="text-error" onclick={() => openDelete(event)}>
+												<Trash2 class="w-4 h-4" /> Hapus
+											</button>
+										</li>
+									</ul>
+								</div>
+							</div>
+						</figure>
+					{:else}
+						<div class="relative aspect-video w-full bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center">
+							<Calendar class="w-16 h-16 text-primary/20" />
+							<div class="absolute top-2 left-2">
+								<Badge variant={getStatusBadge(event.status) as any} size="sm">
+									{getStatusLabel(event.status)}
+								</Badge>
+							</div>
+							<div class="absolute top-2 right-2">
+								<div class="dropdown dropdown-end">
+									<button 
+										class="btn btn-ghost btn-xs btn-square bg-base-100/90 hover:bg-base-100"
+										aria-label="Menu aksi kegiatan"
+									>
+										⋮
+									</button>
+									<ul class="dropdown-content menu bg-base-100 rounded-box shadow-lg z-10 w-44 p-2">
+										<li>
+											<button onclick={() => openDetail(event)}>
+												<Eye class="w-4 h-4" /> Detail
+											</button>
+										</li>
+										<li>
+											<button onclick={() => openAbsensi(event)}>
+												<ClipboardCheck class="w-4 h-4" /> Absensi
+											</button>
+										</li>
+										<li>
+											<a href="/admin/kegiatan/form/{event.id}">
+												<SquarePen class="w-4 h-4" /> Edit
+											</a>
+										</li>
+										<li class="border-t border-base-200 mt-1 pt-1">
+											<button class="text-error" onclick={() => openDelete(event)}>
+												<Trash2 class="w-4 h-4" /> Hapus
+											</button>
+										</li>
+									</ul>
+								</div>
 							</div>
 						</div>
+					{/if}
 
-						<h3 class="font-semibold mt-2">{event.title}</h3>
-						<Badge variant="ghost" size="sm">{event.category}</Badge>
+					<!-- Event Content -->
+					<div class="card-body p-4">
+						<div class="flex items-start gap-2 mb-2">
+							<Badge variant="ghost" size="sm" class="flex-shrink-0">{event.category}</Badge>
+						</div>
 
-						<div class="mt-3 space-y-1 text-sm text-base-content/70">
+						<h3 class="font-semibold text-base line-clamp-2 mb-3 min-h-[3rem]" title={event.title}>
+							{event.title}
+						</h3>
+
+						<div class="space-y-2 text-sm text-base-content/70">
 							<div class="flex items-center gap-2">
-								<Calendar class="w-4 h-4" />
-								{formatDate(event.date)}
+								<Calendar class="w-4 h-4 flex-shrink-0" />
+								<span class="truncate">{formatDate(event.date)}</span>
 							</div>
 							<div class="flex items-center gap-2">
-								<Clock class="w-4 h-4" />
-								{formatTime(event.time)} - {formatTime(event.endTime)}
+								<Clock class="w-4 h-4 flex-shrink-0" />
+								<span>{formatTime(event.time)} - {formatTime(event.endTime)}</span>
 							</div>
 							{#if event.location}
 								<div class="flex items-center gap-2">
-									<MapPin class="w-4 h-4" />
-									{event.location}
+									<MapPin class="w-4 h-4 flex-shrink-0" />
+									<span class="truncate" title={event.location}>{event.location}</span>
 								</div>
 							{/if}
 							{#if event.capacity}
 								<div class="flex items-center gap-2">
-									<Users class="w-4 h-4" />
-									{event.attendees || 0}/{event.capacity} peserta
+									<Users class="w-4 h-4 flex-shrink-0" />
+									<span>
+										<span class="font-medium">{event.attendees || 0}</span>
+										<span class="text-base-content/50">/{event.capacity}</span> peserta
+									</span>
 								</div>
 							{/if}
 						</div>
+
+						<!-- Quick Actions -->
+						<!-- <div class="card-actions justify-end mt-4 pt-3 border-t border-base-200">
+							<button 
+								class="btn btn-ghost btn-sm" 
+								onclick={() => openDetail(event)}
+								aria-label="Lihat detail kegiatan"
+							>
+								<Eye class="w-4 h-4" />
+							</button>
+							<button 
+								class="btn btn-ghost btn-sm" 
+								onclick={() => openAbsensi(event)}
+								aria-label="Kelola absensi"
+							>
+								<ClipboardCheck class="w-4 h-4" />
+							</button>
+							<a 
+								href="/admin/kegiatan/form/{event.id}" 
+								class="btn btn-primary btn-sm"
+								aria-label="Edit kegiatan"
+							>
+								<SquarePen class="w-4 h-4" />
+							</a>
+						</div> -->
 					</div>
 				</div>
 			{:else}

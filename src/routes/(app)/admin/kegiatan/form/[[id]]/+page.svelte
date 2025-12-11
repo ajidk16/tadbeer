@@ -16,11 +16,10 @@
 	} from 'lucide-svelte';
 	import { Toast, error as toastError } from '$lib/components/ui';
 
-	let { data } = $props();
-
-	const { form, errors, constraints, enhance, delayed, message } = superForm(data.form, {
+	const { form, errors, constraints, enhance, delayed, message } = superForm(page.data.form, {
 		validators: valibotClient(eventSchema),
 		onResult: ({ result }) => {
+			console.log('Form submission result:', result);
 			if (result.type === 'failure') {
 				toastError('Gagal menyimpan. Periksa input Anda.');
 			}
@@ -28,7 +27,7 @@
 		}
 	});
 
-	const categories = ['Pengajian', 'Kajian', 'Sholat Jumat', 'Kegiatan Sosial', 'Rapat', 'Lainnya'];
+	const categories = ['kajian', 'ibadah', 'sosial', 'phbi', 'rapat', 'lainnya'];
 
 	let isEditMode = $derived(!!$form.id);
 
@@ -79,7 +78,7 @@
 		<div class="card bg-base-100 shadow-sm border border-base-200 overflow-hidden">
 			<div class="card-body p-0">
 				<!-- Preview Area -->
-				<div
+				<!-- <div
 					class="relative w-full h-48 sm:h-64 bg-base-200 flex items-center justify-center overflow-hidden group"
 				>
 					{#if imagePreview}
@@ -99,7 +98,7 @@
 							<span>Belum ada banner</span>
 						</div>
 					{/if}
-				</div>
+				</div> -->
 
 				<!-- Input Area -->
 				<div class="p-6">
@@ -222,7 +221,7 @@
 							><span class="label-text">Lokasi</span></label
 						>
 						<div class="relative">
-							<MapPin class="absolute left-3 top-3 w-4 h-4 text-base-content/50" />
+							<MapPin class="absolute left-3 top-3 w-4 h-4 text-base-content/50 z-10" />
 							<input
 								type="text"
 								name="location"
@@ -248,7 +247,7 @@
 							><span class="label-text">Tanggal *</span></label
 						>
 						<div class="relative">
-							<Calendar class="absolute left-3 top-3 w-4 h-4 text-base-content/50" />
+							<Calendar class="absolute left-3 top-3 w-4 h-4 text-base-content/50 z-10" />
 							<input
 								type="date"
 								name="date"
@@ -266,7 +265,7 @@
 							><span class="label-text">Mulai *</span></label
 						>
 						<div class="relative">
-							<Clock class="absolute left-3 top-3 w-4 h-4 text-base-content/50" />
+							<Clock class="absolute left-3 top-3 w-4 h-4 text-base-content/50 z-10" />
 							<input
 								type="time"
 								name="time"
@@ -284,7 +283,7 @@
 							><span class="label-text">Selesai</span></label
 						>
 						<div class="relative">
-							<Clock class="absolute left-3 top-3 w-4 h-4 text-base-content/50" />
+							<Clock class="absolute left-3 top-3 w-4 h-4 text-base-content/50 z-10" />
 							<input
 								type="time"
 								name="endTime"
@@ -308,7 +307,6 @@
 							><span class="label-text">Kapasitas Peserta</span></label
 						>
 						<input
-							type="number"
 							name="capacity"
 							class="input input-bordered w-full"
 							placeholder="Tidak terbatas"

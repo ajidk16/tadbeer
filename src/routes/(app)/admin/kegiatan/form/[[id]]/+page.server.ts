@@ -7,7 +7,7 @@ import { db } from '$lib/server/db';
 import { event } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
 import type { Actions, PageServerLoad } from './$types';
-import { uploadImageFromBuffer } from '$lib/server/cloudinary';
+import { deleteImage, getPublicIdFromUrl, uploadImageFromBuffer } from '$lib/server/cloudinary';
 
 export const load: PageServerLoad = async ({ params }) => {
 	const { id } = params;
@@ -36,10 +36,11 @@ export const load: PageServerLoad = async ({ params }) => {
 					minute: '2-digit'
 				}),
 				capacity: existingEvent.capacity?.toString(),
-				imageUrl: existingEvent.imageUrl || '',
+				image: existingEvent.imageUrl || '',
 				location: existingEvent.location ?? undefined,
 				description: existingEvent.description ?? undefined,
-				speaker: existingEvent.speaker ?? undefined
+				speaker: existingEvent.speaker ?? undefined,
+				category: existingEvent.type // Map 'type' to 'category'
 			};
 			form = await superValidate(formData, valibot(eventSchema));
 		}
@@ -81,8 +82,10 @@ export const actions: Actions = {
 					}
 				} catch (err) {
 					console.error('Image upload failed:', err);
-					// Continue without image or handle error?
-					// Ideally fail if image is mandatory, but here let's warn
+					return fail(500, {
+						form,
+						message: 'Gagal mengunggah gambar. Silakan coba lagi atau gunakan gambar yang lebih kecil.'
+					});
 				}
 			}
 
@@ -92,8 +95,9 @@ export const actions: Actions = {
 				endTime: endTimeDate,
 				capacity: rest.capacity ? Number(rest.capacity) : 0,
 				type: rest.category as any,
-				imageUrl: imageUrl || undefined // Only set if we have a URL
-			});
+				imageUrl: imageUrl || undefined
+			})
+
 		} catch (error) {
 			console.error(error);
 			return fail(500, { form, message: 'Gagal menyimpan kegiatan' });
@@ -125,17 +129,41 @@ export const actions: Actions = {
 			let imageUrl = undefined; // Undefined means don't update key in some ORMs, but Drizzle updates if passed.
 			// We need to construct the update object conditionally or check if image provided.
 			// Ideally we query existing if we need to delete old one, but for now just overwrite.
+			const existingEvent = await db.query.event.findFirst({
+				where: eq(event.id, form.data.id)
+			});
 
-			const imageFile = formData.get('image');
+			if (!existingEvent) {
+				return fail(404, { form, message: 'Kegiatan tidak ditemukan' });
+			}
+
+			const imageFile = formData.get('image') as File;
+
 			if (imageFile && imageFile instanceof File && imageFile.size > 0) {
 				const buffer = Buffer.from(await imageFile.arrayBuffer());
+
 				try {
 					const uploadResult = await uploadImageFromBuffer(buffer, 'minimasjid/events');
-					if (uploadResult && uploadResult.secure_url) {
-						imageUrl = uploadResult.secure_url;
+					imageUrl = uploadResult.secure_url;
+
+					// Only delete old image after successful upload
+					if (existingEvent.imageUrl) {
+						const oldImageId = getPublicIdFromUrl(existingEvent.imageUrl);
+						if (oldImageId) {
+							try {
+								await deleteImage(oldImageId);
+							} catch (deleteErr) {
+								console.error('Failed to delete old image:', deleteErr);
+								// Continue anyway, new image uploaded successfully
+							}
+						}
 					}
 				} catch (err) {
 					console.error('Image upload failed:', err);
+					return fail(500, {
+						form,
+						message: 'Gagal mengunggah gambar. Silakan coba lagi atau gunakan gambar yang lebih kecil.'
+					});
 				}
 			}
 
@@ -169,7 +197,21 @@ export const actions: Actions = {
 			return fail(400, { message: 'ID required' });
 		}
 
+		const exitstingEvent = await db.query.event.findFirst({
+			where: eq(event.id, Number(id))
+		});
+
+		if (!exitstingEvent) {
+			return fail(404, { message: 'Kegiatan tidak ditemukan' });
+		}
+
+
 		try {
+			if (exitstingEvent.imageUrl) {
+				const publicId = getPublicIdFromUrl(exitstingEvent.imageUrl);
+
+				if (publicId) await deleteImage(publicId);
+			}
 			await db.delete(event).where(eq(event.id, Number(id)));
 		} catch (error) {
 			console.error(error);

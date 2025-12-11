@@ -7,7 +7,7 @@ import { sha256 } from '@oslojs/crypto/sha2';
 export async function seedUsers() {
 	console.log('Seeding users...');
 	try {
-		const passwordHash = await hash('password123', {
+		const passwordHash = await hash('bismillah', {
 			memoryCost: 19456,
 			timeCost: 2,
 			outputLen: 32,
@@ -17,7 +17,7 @@ export async function seedUsers() {
 		const users = [
 			{
 				id: encodeHexLowerCase(sha256(new TextEncoder().encode('super_admin'))),
-				username: 'superadmin@example.com',
+				username: 'dkaji@gmail.com',
 				passwordHash,
 				fullName: 'Super Admin',
 				role: 'super_admin' as const,
