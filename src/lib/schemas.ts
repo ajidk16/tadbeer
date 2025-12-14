@@ -163,7 +163,8 @@ export const campaignSchema = v.object({
 		v.minValue(1, 'Amount must be greater than 0')
 	),
 	deadline: v.pipe(v.string(), v.minLength(1, 'Tentukan batas waktu')),
-	description: v.optional(v.string())
+	description: v.optional(v.string()),
+	image: v.optional(v.any())
 });
 
 export type CampaignSchema = typeof campaignSchema;

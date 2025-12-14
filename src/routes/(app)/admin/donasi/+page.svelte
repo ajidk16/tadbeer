@@ -7,40 +7,26 @@
 		Heart,
 		DollarSign,
 		Users,
-		TrendingUp,
 		Share2,
 		Copy,
 		Trash2,
-		ExternalLink,
 		CreditCard,
 		Wallet,
 		QrCode,
 		Clock,
 		SquarePen,
-		X
+		ImageIcon
 	} from 'lucide-svelte';
 	import { page } from '$app/state';
 
-	const { form, errors, enhance, constraints, message, delayed } = superForm(page.data.form, {
-		delayMs: 0, // Show loading indicator immediately
-		timeoutMs: 8000, // 8s timeout
+	// For Delete Form (using superForm for handling the delete action result)
+	const { form, enhance, delayed } = superForm(page.data.form, {
 		onResult: ({ result }) => {
-			if (showCampaignModal) {
-				// Close modal on success
-				if (result.type === 'success') {
-					toastSuccess(isEditMode ? 'Program diperbarui' : 'Program donasi berhasil dibuat');
-					showCampaignModal = false;
-				} else if (result.type === 'failure') {
-					// Server returns { form, message: '...' } on failure
-					toastError(result.data?.message || 'Gagal menyimpan');
-				}
-			} else {
-				if (result.type === 'success') {
-					toastSuccess('Data berhasil dihapus');
-					showDeleteModal = false;
-				} else {
-					toastError('Gagal menghapus');
-				}
+			if (result.type === 'success') {
+				toastSuccess('Data berhasil dihapus');
+				showDeleteModal = false;
+			} else if (result.type === 'failure') {
+				toastError('Gagal menghapus');
 			}
 		}
 	});
@@ -49,10 +35,8 @@
 	let activeTab = $state('campaigns'); // campaigns, transactions
 
 	// Modal states
-	let showCampaignModal = $state(false);
 	let showDeleteModal = $state(false);
 	let selectedItem = $state<any>(null);
-	let isEditMode = $state(false);
 
 	function formatCurrency(amount: number) {
 		return new Intl.NumberFormat('id-ID', {
@@ -76,19 +60,8 @@
 		return Math.min(Math.round((collected / target) * 100), 100);
 	}
 
-	let formTargetFormatted = $state('');
-
-	function formatTargetInput(e: Event) {
-		const input = e.target as HTMLInputElement;
-		const value = input.value.replace(/\D/g, '');
-		$form.target = Number(value); // Update form store directly
-		formTargetFormatted = value ? new Intl.NumberFormat('id-ID').format(Number(value)) : '';
-		input.value = formTargetFormatted;
-	}
-
 	function copyLink(id: string) {
 		const url = `${window.location.origin}/donasi/${id}`;
-		// Fallback for clipboard API in some envs, but standard is fine
 		navigator.clipboard
 			.writeText(url)
 			.then(() => {
@@ -99,58 +72,16 @@
 			});
 	}
 
-	function openCampaignModal() {
-		selectedItem = null;
-		isEditMode = false;
-		// Reset form
-		$form.id = undefined;
-		$form.title = '';
-
-		formTargetFormatted = new Intl.NumberFormat('id-ID').format(0);
-		$form.deadline = '';
-		$form.description = '';
-		showCampaignModal = true;
-	}
-
-	function openEditCampaign(item: any) {
-		selectedItem = item;
-		isEditMode = true;
-
-		$form.id = item.id;
-		$form.title = item.title;
-		// $form.target = item.target;
-		formTargetFormatted = new Intl.NumberFormat('id-ID').format(item.target);
-		$form.deadline = item.deadline; // Already YYYY-MM-DD from server transform
-		$form.description = item.description || '';
-
-		showCampaignModal = true;
-	}
-
 	function openDelete(item: any) {
 		selectedItem = item;
 		$form.id = item.id;
-
 		showDeleteModal = true;
-	}
-
-	function handleDelete() {
-		return async ({ result, update }: any) => {
-			showDeleteModal = false;
-			if (result.type === 'success') {
-				toastSuccess('Data berhasil dihapus');
-				await update();
-			} else {
-				toastError('Gagal menghapus');
-			}
-		};
 	}
 </script>
 
 <svelte:head>
 	<title>Donasi | TadBeer</title>
 </svelte:head>
-
-<!-- <Toast /> -->
 
 <div class="space-y-6">
 	<!-- Header -->
@@ -159,9 +90,9 @@
 			<h1 class="text-2xl font-bold">💝 Donasi Online</h1>
 			<p class="text-base-content/60 mt-1">Kelola program donasi dan infaq</p>
 		</div>
-		<button class="btn btn-primary btn-sm" onclick={openCampaignModal}>
+		<a href="/admin/donasi/form" class="btn btn-primary btn-sm">
 			<Plus class="w-4 h-4" /> Buat Program
-		</button>
+		</a>
 	</div>
 
 	<!-- Stats -->
@@ -209,34 +140,83 @@
 	{#if activeTab === 'campaigns'}
 		<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
 			{#each page.data.campaigns as campaign}
-				<div class="card bg-base-100 shadow-sm hover:shadow-md transition-shadow">
-					<div class="card-body p-4">
-						<div class="flex justify-between items-start mb-2">
-							<Badge variant={campaign.status === 'active' ? 'success' : 'ghost'} size="sm">
-								{campaign.status === 'active' ? 'Aktif' : 'Selesai'}
-							</Badge>
-							<div class="dropdown dropdown-end">
-								<button class="btn btn-ghost btn-xs btn-square">⋮</button>
-								<ul class="dropdown-content menu bg-base-100 rounded-box shadow z-10 w-40 p-1">
-									<li>
-										<button onclick={() => copyLink(campaign.id.toString())}
-											><Copy class="w-4 h-4" /> Salin Link</button
-										>
-									</li>
-									<li>
-										<button onclick={() => openEditCampaign(campaign)}
-											><SquarePen class="w-4 h-4" /> Edit</button
-										>
-									</li>
-									<li>
-										<button class="text-error" onclick={() => openDelete(campaign)}
-											><Trash2 class="w-4 h-4" /> Hapus</button
-										>
-									</li>
-								</ul>
+				<div class="card bg-base-100 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+					{#if campaign.imageUrl}
+						<figure class="relative aspect-video w-full overflow-hidden">
+							<img
+								src={campaign.imageUrl}
+								alt={campaign.title}
+								class="w-full h-full object-cover transition-transform hover:scale-105 duration-300"
+								loading="lazy"
+							/>
+							<div class="absolute top-2 left-2">
+								<Badge variant={campaign.status === 'active' ? 'success' : 'ghost'} size="sm">
+									{campaign.status === 'active' ? 'Aktif' : 'Selesai'}
+								</Badge>
+							</div>
+							<div class="absolute top-2 right-2">
+								<div class="dropdown dropdown-end">
+									<button class="btn btn-ghost btn-xs btn-square bg-base-100/90 hover:bg-base-100"
+										>⋮</button
+									>
+									<ul class="dropdown-content menu bg-base-100 rounded-box shadow z-10 w-40 p-1">
+										<li>
+											<button onclick={() => copyLink(campaign.id.toString())}>
+												<Copy class="w-4 h-4" /> Salin Link
+											</button>
+										</li>
+										<li>
+											<a href="/admin/donasi/form/{campaign.id}">
+												<SquarePen class="w-4 h-4" /> Edit
+											</a>
+										</li>
+										<li>
+											<button class="text-error" onclick={() => openDelete(campaign)}>
+												<Trash2 class="w-4 h-4" /> Hapus
+											</button>
+										</li>
+									</ul>
+								</div>
+							</div>
+						</figure>
+					{:else}
+						<div
+							class="relative aspect-video w-full bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center"
+						>
+							<ImageIcon class="w-12 h-12 text-primary/20" />
+							<div class="absolute top-2 left-2">
+								<Badge variant={campaign.status === 'active' ? 'success' : 'ghost'} size="sm">
+									{campaign.status === 'active' ? 'Aktif' : 'Selesai'}
+								</Badge>
+							</div>
+							<div class="absolute top-2 right-2">
+								<div class="dropdown dropdown-end">
+									<button class="btn btn-ghost btn-xs btn-square bg-base-100/90 hover:bg-base-100"
+										>⋮</button
+									>
+									<ul class="dropdown-content menu bg-base-100 rounded-box shadow z-10 w-40 p-1">
+										<li>
+											<button onclick={() => copyLink(campaign.id.toString())}>
+												<Copy class="w-4 h-4" /> Salin Link
+											</button>
+										</li>
+										<li>
+											<a href="/admin/donasi/form/{campaign.id}">
+												<SquarePen class="w-4 h-4" /> Edit
+											</a>
+										</li>
+										<li>
+											<button class="text-error" onclick={() => openDelete(campaign)}>
+												<Trash2 class="w-4 h-4" /> Hapus
+											</button>
+										</li>
+									</ul>
+								</div>
 							</div>
 						</div>
+					{/if}
 
+					<div class="card-body p-4">
 						<h3 class="font-bold text-lg mb-1">{campaign.title}</h3>
 						<div class="text-sm text-base-content/60 mb-4">
 							<div class="flex items-center gap-1">
@@ -335,98 +315,6 @@
 		</div>
 	{/if}
 </div>
-
-<!-- Campaign Modal -->
-{#if showCampaignModal}
-	<dialog class="modal modal-open">
-		<div class="modal-box">
-			<button
-				class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2"
-				onclick={() => {
-					showCampaignModal = false;
-				}}
-			>
-				<X class="w-4 h-4" />
-			</button>
-			<h3 class="font-bold text-lg mb-4">
-				{isEditMode ? '✏️ Edit Program Donasi' : '💝 Buat Program Donasi'}
-			</h3>
-			<form method="POST" action={isEditMode ? '?/updateCampaign' : '?/createCampaign'} use:enhance>
-				{#if isEditMode}
-					<input type="hidden" name="id" value={$form.id} />
-				{/if}
-				<div class="space-y-4">
-					<div class="form-control">
-						<label for="title" class="label"><span class="label-text">Nama Program</span></label>
-						<input
-							type="text"
-							name="title"
-							class="input input-bordered w-full"
-							bind:value={$form.title}
-							{...$constraints.title}
-							placeholder="Contoh: Renovasi Kubah"
-						/>
-						{#if $errors.title}<span class="text-error text-xs mt-1">{$errors.title}</span>{/if}
-					</div>
-					<div class="form-control">
-						<label for="target" class="label"
-							><span class="label-text">Target Dana (Rp)</span></label
-						>
-						<label class="input input-bordered w-full flex items-center gap-2">
-							<span class="text-base-content/60">Rp</span>
-							<input
-								class="grow"
-								value={formTargetFormatted}
-								placeholder="0"
-								oninput={formatTargetInput}
-							/>
-						</label>
-						<input type="hidden" name="target" value={$form.target} />
-						{#if $errors.target}<span class="text-error text-xs mt-1">{$errors.target}</span>{/if}
-					</div>
-					<div class="form-control">
-						<label for="deadline" class="label"><span class="label-text">Batas Waktu</span></label>
-						<input
-							type="date"
-							name="deadline"
-							class="input input-bordered w-full"
-							bind:value={$form.deadline}
-							{...$constraints.deadline}
-						/>
-						{#if $errors.deadline}<span class="text-error text-xs mt-1">{$errors.deadline}</span
-							>{/if}
-					</div>
-					<div class="form-control">
-						<label for="description" class="label"><span class="label-text">Deskripsi</span></label>
-						<textarea
-							name="description"
-							class="textarea textarea-bordered h-24 w-full"
-							bind:value={$form.description}
-							{...$constraints.description}
-							placeholder="Jelaskan tujuan donasi..."
-						></textarea>
-					</div>
-				</div>
-				<div class="modal-action">
-					<button type="button" class="btn btn-ghost" onclick={() => (showCampaignModal = false)}
-						>Batal</button
-					>
-					<button type="submit" class="btn btn-primary" disabled={$delayed}>
-						{#if $delayed}
-							<span class="loading loading-spinner loading-sm"></span>
-						{:else}
-							<Plus class="w-4 h-4" />
-						{/if}
-						{isEditMode ? 'Simpan Perubahan' : 'Buat Program'}
-					</button>
-				</div>
-			</form>
-		</div>
-		<form method="dialog" class="modal-backdrop">
-			<button onclick={() => (showCampaignModal = false)}>close</button>
-		</form>
-	</dialog>
-{/if}
 
 <!-- Delete Modal -->
 {#if showDeleteModal}
