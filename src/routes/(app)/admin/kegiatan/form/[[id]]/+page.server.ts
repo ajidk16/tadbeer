@@ -59,6 +59,7 @@ export const actions: Actions = {
 		const form = await superValidate(formData, valibot(eventSchema));
 
 		if (!form.valid) {
+			delete form.data.image;
 			return fail(400, { form });
 		}
 
@@ -82,9 +83,11 @@ export const actions: Actions = {
 					}
 				} catch (err) {
 					console.error('Image upload failed:', err);
+					delete form.data.image;
 					return fail(500, {
 						form,
-						message: 'Gagal mengunggah gambar. Silakan coba lagi atau gunakan gambar yang lebih kecil.'
+						message:
+							'Gagal mengunggah gambar. Silakan coba lagi atau gunakan gambar yang lebih kecil.'
 					});
 				}
 			}
@@ -96,25 +99,27 @@ export const actions: Actions = {
 				capacity: rest.capacity ? Number(rest.capacity) : 0,
 				type: rest.category as any,
 				imageUrl: imageUrl || undefined
-			})
-
+			});
 		} catch (error) {
 			console.error(error);
+			delete form.data.image;
 			return fail(500, { form, message: 'Gagal menyimpan kegiatan' });
 		}
 
 		throw redirect(303, '/admin/kegiatan');
 	},
 
-	update: async ({ request, }) => {
+	update: async ({ request }) => {
 		const formData = await request.formData();
 		const form = await superValidate(formData, valibot(eventSchema));
 
 		if (!form.valid) {
+			delete form.data.image;
 			return fail(400, { form });
 		}
 
 		if (!form.data.id) {
+			delete form.data.image;
 			return fail(400, { form, message: 'ID missing for update' });
 		}
 
@@ -134,6 +139,7 @@ export const actions: Actions = {
 			});
 
 			if (!existingEvent) {
+				delete form.data.image;
 				return fail(404, { form, message: 'Kegiatan tidak ditemukan' });
 			}
 
@@ -160,9 +166,11 @@ export const actions: Actions = {
 					}
 				} catch (err) {
 					console.error('Image upload failed:', err);
+					delete form.data.image;
 					return fail(500, {
 						form,
-						message: 'Gagal mengunggah gambar. Silakan coba lagi atau gunakan gambar yang lebih kecil.'
+						message:
+							'Gagal mengunggah gambar. Silakan coba lagi atau gunakan gambar yang lebih kecil.'
 					});
 				}
 			}
@@ -182,6 +190,7 @@ export const actions: Actions = {
 			await db.update(event).set(updatePayload).where(eq(event.id, form.data.id));
 		} catch (error) {
 			console.error(error);
+			delete form.data.image;
 			return fail(500, { form, message: 'Gagal memperbarui kegiatan' });
 		}
 
@@ -204,7 +213,6 @@ export const actions: Actions = {
 		if (!exitstingEvent) {
 			return fail(404, { message: 'Kegiatan tidak ditemukan' });
 		}
-
 
 		try {
 			if (exitstingEvent.imageUrl) {

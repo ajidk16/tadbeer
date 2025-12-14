@@ -11,7 +11,7 @@
 		ArrowLeft,
 		Trash2,
 		Image as ImageIcon,
-		AlertCircle,
+		CircleAlert,
 		X
 	} from 'lucide-svelte';
 	import { Toast, error as toastError } from '$lib/components/ui';
@@ -32,7 +32,21 @@
 	let isEditMode = $derived(!!$form.id);
 
 	// Preview Image Logic
-	let imagePreview = $derived($form.image);
+	let imagePreview = $state($form.image);
+
+	function handleFileChange(e: Event) {
+		const input = e.currentTarget as HTMLInputElement;
+		const file = input.files?.[0];
+		if (file) {
+			const reader = new FileReader();
+			reader.onload = () => {
+				if (typeof reader.result === 'string') {
+					imagePreview = reader.result;
+				}
+			};
+			reader.readAsDataURL(file);
+		}
+	}
 </script>
 
 <svelte:head>
@@ -65,7 +79,7 @@
 	>
 		{#if $message}
 			<div role="alert" class="alert alert-error">
-				<AlertCircle class="w-5 h-5" />
+				<CircleAlert class="w-5 h-5" />
 				<span>{$message}</span>
 			</div>
 		{/if}
@@ -145,16 +159,7 @@
 									name="image"
 									accept="image/*"
 									class="file-input file-input-bordered file-input-primary w-full"
-									onchange={(e) => {
-										const file = e.currentTarget.files?.[0];
-										if (file) {
-											const reader = new FileReader();
-											reader.onload = (e) => {
-												imagePreview = e.target?.result as string;
-											};
-											reader.readAsDataURL(file);
-										}
-									}}
+									onchange={handleFileChange}
 								/>
 								<div class="mt-2 text-xs text-base-content/60 flex items-center gap-1">
 									<ImageIcon class="w-3 h-3" />
@@ -164,7 +169,7 @@
 						</div>
 						{#if $errors.image}
 							<span class="label-text-alt text-error mt-1 flex items-center gap-1">
-								<AlertCircle class="w-3 h-3" />
+								<CircleAlert class="w-3 h-3" />
 								{$errors.image}
 							</span>
 						{/if}
